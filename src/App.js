@@ -14,87 +14,34 @@ function App() {
   const [loadingWeather, setLoadingWeather] = useState(false);
   const [weatherError, setWeatherError] = useState(null);
 
-  const plantDatabase = [
-    { name: 'Alyssum', daysToMaturity: 70, tempLower: 60, tempUpper: 85, tolerance: 'moderate', maxWeeksOutside: 3, size: 'M', spacing: 4.5, category: 'Flower' },
-    { name: 'Alyssum (Fall)', daysToMaturity: 70, tempLower: 60, tempUpper: 85, tolerance: 'moderate', maxWeeksOutside: 3, size: 'M', spacing: 4.5, category: 'Flower' },
-    { name: 'Amaranth', daysToMaturity: 90, tempLower: 65, tempUpper: 90, tolerance: 'moderate', maxWeeksOutside: 3, size: 'M', spacing: 4.5, category: 'Vegetable' },
-    { name: 'Artichoke', daysToMaturity: 160, tempLower: 60, tempUpper: 80, tolerance: 'moderate', maxWeeksOutside: 3, size: 'XXL', spacing: 18, category: 'Vegetable' },
-    { name: 'Asparagus', daysToMaturity: 700, tempLower: 65, tempUpper: 75, tolerance: 'moderate', maxWeeksOutside: 3, size: 'XL', spacing: 12, category: 'Vegetable' },
-    { name: 'Basil', daysToMaturity: 60, tempLower: 70, tempUpper: 85, tolerance: 'flexible', maxWeeksOutside: 4, size: 'S', spacing: 3, category: 'Herb' },
-    { name: 'Bee Balm', daysToMaturity: 115, tempLower: 60, tempUpper: 90, tolerance: 'moderate', maxWeeksOutside: 3, size: 'S', spacing: 3, category: 'Herb' },
-    { name: 'Beets (Fall)', daysToMaturity: 55, tempLower: 50, tempUpper: 85, tolerance: 'moderate', maxWeeksOutside: 3, size: 'XS', spacing: 1.5, category: 'Vegetable' },
-    { name: 'Beets (Spring)', daysToMaturity: 55, tempLower: 50, tempUpper: 85, tolerance: 'moderate', maxWeeksOutside: 3, size: 'XS', spacing: 1.5, category: 'Vegetable' },
-    { name: 'Black Eyed Susan', daysToMaturity: 120, tempLower: 65, tempUpper: 90, tolerance: 'moderate', maxWeeksOutside: 3, size: 'M', spacing: 4.5, category: 'Flower' },
-    { name: 'Black Knight Runner Bean', daysToMaturity: 80, tempLower: 60, tempUpper: 85, tolerance: 'moderate', maxWeeksOutside: 3, size: 'S', spacing: 3, category: 'Vegetable' },
-    { name: 'Blue Lake 274 Bean (fall)', daysToMaturity: 58, tempLower: 70, tempUpper: 80, tolerance: 'moderate', maxWeeksOutside: 3, size: 'M', spacing: 4.5, category: 'Vegetable' },
-    { name: 'Blue Lake 274 Bean (spring)', daysToMaturity: 58, tempLower: 70, tempUpper: 80, tolerance: 'moderate', maxWeeksOutside: 3, size: 'M', spacing: 4.5, category: 'Vegetable' },
-    { name: 'Bok Choy (Fall)', daysToMaturity: 50, tempLower: 60, tempUpper: 80, tolerance: 'strict', maxWeeksOutside: 2, size: 'S', spacing: 3, category: 'Vegetable' },
-    { name: 'Bok Choy (Spring)', daysToMaturity: 50, tempLower: 60, tempUpper: 80, tolerance: 'strict', maxWeeksOutside: 2, size: 'S', spacing: 3, category: 'Vegetable' },
-    { name: 'Broccoli', daysToMaturity: 55, tempLower: 50, tempUpper: 75, tolerance: 'strict', maxWeeksOutside: 2, size: 'L', spacing: 6, category: 'Vegetable' },
-    { name: 'Calendula (Fall)', daysToMaturity: 80, tempLower: 68, tempUpper: 85, tolerance: 'moderate', maxWeeksOutside: 3, size: 'S', spacing: 3, category: 'Flower' },
-    { name: 'Calendula (Spring)', daysToMaturity: 80, tempLower: 68, tempUpper: 85, tolerance: 'moderate', maxWeeksOutside: 3, size: 'S', spacing: 3, category: 'Flower' },
-    { name: 'Carrot (Fall)', daysToMaturity: 75, tempLower: 50, tempUpper: 75, tolerance: 'moderate', maxWeeksOutside: 3, size: 'XS', spacing: 1.5, category: 'Vegetable' },
-    { name: 'Carrot (Spring)', daysToMaturity: 75, tempLower: 50, tempUpper: 75, tolerance: 'moderate', maxWeeksOutside: 3, size: 'XS', spacing: 1.5, category: 'Vegetable' },
-    { name: 'Cauliflower (Fall)', daysToMaturity: 70, tempLower: 50, tempUpper: 75, tolerance: 'strict', maxWeeksOutside: 2, size: 'L', spacing: 6, category: 'Vegetable' },
-    { name: 'Cauliflower (Spring)', daysToMaturity: 70, tempLower: 50, tempUpper: 75, tolerance: 'strict', maxWeeksOutside: 2, size: 'L', spacing: 6, category: 'Vegetable' },
-    { name: 'Celery', daysToMaturity: 120, tempLower: 70, tempUpper: 75, tolerance: 'moderate', maxWeeksOutside: 3, size: 'M', spacing: 4.5, category: 'Vegetable' },
-    { name: 'Celosia', daysToMaturity: 21, tempLower: 65, tempUpper: 95, tolerance: 'moderate', maxWeeksOutside: 3, size: 'S', spacing: 3, category: 'Flower' },
-    { name: 'Chamomile', daysToMaturity: 90, tempLower: 68, tempUpper: 85, tolerance: 'strict', maxWeeksOutside: 2, size: 'S', spacing: 3, category: 'Herb' },
-    { name: 'Cilantro', daysToMaturity: 45, tempLower: 60, tempUpper: 80, tolerance: 'strict', maxWeeksOutside: 2, size: 'S', spacing: 3, category: 'Herb' },
-    { name: 'Contender Bean (fall)', daysToMaturity: 50, tempLower: 70, tempUpper: 80, tolerance: 'moderate', maxWeeksOutside: 3, size: 'M', spacing: 4.5, category: 'Vegetable' },
-    { name: 'Contender Bean (spring)', daysToMaturity: 50, tempLower: 70, tempUpper: 80, tolerance: 'moderate', maxWeeksOutside: 3, size: 'M', spacing: 4.5, category: 'Vegetable' },
-    { name: 'Corn', daysToMaturity: 75, tempLower: 75, tempUpper: 80, tolerance: 'moderate', maxWeeksOutside: 3, size: 'XL', spacing: 12, category: 'Vegetable' },
-    { name: 'Cosmos', daysToMaturity: 90, tempLower: 70, tempUpper: 75, tolerance: 'moderate', maxWeeksOutside: 3, size: 'M', spacing: 4.5, category: 'Flower' },
-    { name: 'Cucumber (Fall)', daysToMaturity: 55, tempLower: 70, tempUpper: 90, tolerance: 'moderate', maxWeeksOutside: 3, size: 'L', spacing: 6, category: 'Vegetable' },
-    { name: 'Cucumber (Spring)', daysToMaturity: 70, tempLower: 70, tempUpper: 90, tolerance: 'moderate', maxWeeksOutside: 3, size: 'L', spacing: 6, category: 'Vegetable' },
-    { name: 'Daffodils', daysToMaturity: 105, tempLower: 50, tempUpper: 70, tolerance: 'strict', maxWeeksOutside: 2, size: 'S', spacing: 3, category: 'Flower' },
-    { name: 'Dill', daysToMaturity: 100, tempLower: 55, tempUpper: 75, tolerance: 'strict', maxWeeksOutside: 2, size: 'S', spacing: 3, category: 'Herb' },
-    { name: 'Echinacea', daysToMaturity: 120, tempLower: 65, tempUpper: 70, tolerance: 'moderate', maxWeeksOutside: 3, size: 'M', spacing: 4.5, category: 'Flower' },
-    { name: 'Eggplant', daysToMaturity: 90, tempLower: 75, tempUpper: 95, tolerance: 'moderate', maxWeeksOutside: 3, size: 'L', spacing: 9, category: 'Vegetable' },
-    { name: 'Gomphrena', daysToMaturity: 70, tempLower: 70, tempUpper: 80, tolerance: 'moderate', maxWeeksOutside: 3, size: 'M', spacing: 4.5, category: 'Flower' },
-    { name: 'Green Cauliflower', daysToMaturity: 70, tempLower: 50, tempUpper: 75, tolerance: 'strict', maxWeeksOutside: 2, size: 'XL', spacing: 9, category: 'Vegetable' },
-    { name: 'Hyssop', daysToMaturity: 85, tempLower: 70, tempUpper: 80, tolerance: 'flexible', maxWeeksOutside: 4, size: 'S', spacing: 3, category: 'Herb' },
-    { name: 'Kale (Fall)', daysToMaturity: 55, tempLower: 65, tempUpper: 85, tolerance: 'flexible', maxWeeksOutside: 4, size: 'M', spacing: 4.5, category: 'Vegetable' },
-    { name: 'Kale (Spring)', daysToMaturity: 55, tempLower: 65, tempUpper: 85, tolerance: 'flexible', maxWeeksOutside: 4, size: 'M', spacing: 4.5, category: 'Vegetable' },
-    { name: 'Lavender', daysToMaturity: 200, tempLower: 70, tempUpper: 75, tolerance: 'flexible', maxWeeksOutside: 4, size: 'L', spacing: 6, category: 'Herb', perennial: true },
-    { name: 'Lemon Balm', daysToMaturity: 70, tempLower: 68, tempUpper: 70, tolerance: 'moderate', maxWeeksOutside: 3, size: 'S', spacing: 3, category: 'Herb', perennial: true, separate: true },
-    { name: 'Lettuce', daysToMaturity: 55, tempLower: 60, tempUpper: 70, tolerance: 'moderate', maxWeeksOutside: 3, size: 'S', spacing: 3, category: 'Vegetable' },
-    { name: 'Marigold', daysToMaturity: 95, tempLower: 75, tempUpper: 80, tolerance: 'moderate', maxWeeksOutside: 3, size: 'M', spacing: 4.5, category: 'Flower' },
-    { name: 'Melon', daysToMaturity: 100, tempLower: 70, tempUpper: 90, tolerance: 'moderate', maxWeeksOutside: 3, size: 'XL', spacing: 12, category: 'Fruit' },
-    { name: 'Mint', daysToMaturity: 90, tempLower: 55, tempUpper: 90, tolerance: 'moderate', maxWeeksOutside: 3, size: 'S', spacing: 3, category: 'Herb', perennial: true, separate: true },
-    { name: 'Monarda (Bee Balm)', daysToMaturity: 115, tempLower: 60, tempUpper: 90, tolerance: 'moderate', maxWeeksOutside: 3, size: 'M', spacing: 4.5, category: 'Herb' },
-    { name: 'Mullein', daysToMaturity: 140, tempLower: 60, tempUpper: 70, tolerance: 'strict', maxWeeksOutside: 2, size: 'M', spacing: 4.5, category: 'Herb' },
-    { name: 'Nasturtium', daysToMaturity: 90, tempLower: 60, tempUpper: 70, tolerance: 'moderate', maxWeeksOutside: 3, size: 'S', spacing: 3, category: 'Flower' },
-    { name: 'Onion (Fall)', daysToMaturity: 160, tempLower: 45, tempUpper: 80, tolerance: 'moderate', maxWeeksOutside: 3, size: 'S', spacing: 3, category: 'Vegetable' },
-    { name: 'Oregano', daysToMaturity: 90, tempLower: 70, tempUpper: 80, tolerance: 'moderate', maxWeeksOutside: 3, size: 'M', spacing: 4.5, category: 'Herb' },
-    { name: 'Pansy', daysToMaturity: 84, tempLower: 62, tempUpper: 70, tolerance: 'moderate', maxWeeksOutside: 3, size: 'M', spacing: 4.5, category: 'Flower' },
-    { name: 'Parsley', daysToMaturity: 90, tempLower: 50, tempUpper: 85, tolerance: 'strict', maxWeeksOutside: 2, size: 'S', spacing: 3, category: 'Herb' },
-    { name: 'Pumpkin', daysToMaturity: 120, tempLower: 65, tempUpper: 95, tolerance: 'moderate', maxWeeksOutside: 3, size: 'XL', spacing: 12, category: 'Vegetable' },
-    { name: 'Purple Broccoli', daysToMaturity: 42, tempLower: 60, tempUpper: 80, tolerance: 'strict', maxWeeksOutside: 2, size: 'L', spacing: 6, category: 'Vegetable' },
-    { name: 'Purple Cauliflower', daysToMaturity: 70, tempLower: 50, tempUpper: 75, tolerance: 'strict', maxWeeksOutside: 2, size: 'XL', spacing: 9, category: 'Vegetable' },
-    { name: 'Radicchio (Fall)', daysToMaturity: 95, tempLower: 60, tempUpper: 75, tolerance: 'strict', maxWeeksOutside: 2, size: 'L', spacing: 6, category: 'Vegetable' },
-    { name: 'Radicchio (Spring)', daysToMaturity: 95, tempLower: 60, tempUpper: 75, tolerance: 'strict', maxWeeksOutside: 2, size: 'L', spacing: 6, category: 'Vegetable' },
-    { name: 'Radish', daysToMaturity: 22, tempLower: 50, tempUpper: 75, tolerance: 'moderate', maxWeeksOutside: 3, size: 'XS', spacing: 2, category: 'Vegetable' },
-    { name: 'Rattlesnake Pole Beans', daysToMaturity: 110, tempLower: 70, tempUpper: 80, tolerance: 'moderate', maxWeeksOutside: 3, size: 'M', spacing: 6, category: 'Vegetable' },
-    { name: 'Rhubarb', daysToMaturity: 60, tempLower: 75, tempUpper: 90, tolerance: 'moderate', maxWeeksOutside: 3, size: 'M', spacing: 4.5, category: 'Vegetable' },
-    { name: 'Romanesco Broccoli (Fall)', daysToMaturity: 90, tempLower: 60, tempUpper: 80, tolerance: 'moderate', maxWeeksOutside: 3, size: 'L', spacing: 6, category: 'Vegetable' },
-    { name: 'Romanesco Broccoli (Spring)', daysToMaturity: 90, tempLower: 60, tempUpper: 80, tolerance: 'moderate', maxWeeksOutside: 3, size: 'L', spacing: 6, category: 'Vegetable' },
-    { name: 'Rosemary', daysToMaturity: 400, tempLower: 68, tempUpper: 90, tolerance: 'flexible', maxWeeksOutside: 4, size: 'L', spacing: 6, category: 'Herb', perennial: true },
-    { name: 'Short Stalk Bok Choy', daysToMaturity: 60, tempLower: 60, tempUpper: 80, tolerance: 'strict', maxWeeksOutside: 2, size: 'S', spacing: 3, category: 'Vegetable' },
-    { name: 'Spicy Peppers', daysToMaturity: 80, tempLower: 70, tempUpper: 95, tolerance: 'moderate', maxWeeksOutside: 3, size: 'M', spacing: 4.5, category: 'Vegetable' },
-    { name: 'Strawberry', daysToMaturity: 150, tempLower: 60, tempUpper: 75, tolerance: 'moderate', maxWeeksOutside: 3, size: 'M', spacing: 4.5, category: 'Fruit' },
-    { name: 'Sugar Peas', daysToMaturity: 65, tempLower: 45, tempUpper: 80, tolerance: 'moderate', maxWeeksOutside: 3, size: 'M', spacing: 4.5, category: 'Vegetable' },
-    { name: 'Summer Squash', daysToMaturity: 55, tempLower: 70, tempUpper: 85, tolerance: 'moderate', maxWeeksOutside: 3, size: 'XL', spacing: 12, category: 'Vegetable' },
-    { name: 'Sweet Peppers', daysToMaturity: 70, tempLower: 70, tempUpper: 95, tolerance: 'moderate', maxWeeksOutside: 3, size: 'M', spacing: 4.5, category: 'Vegetable' },
-    { name: 'Swiss Chard', daysToMaturity: 60, tempLower: 50, tempUpper: 75, tolerance: 'moderate', maxWeeksOutside: 3, size: 'M', spacing: 4.5, category: 'Vegetable' },
-    { name: 'Thyme', daysToMaturity: 90, tempLower: 60, tempUpper: 75, tolerance: 'flexible', maxWeeksOutside: 4, size: 'M', spacing: 6, perennial: true, category: 'Herb' },
-    { name: 'Tomatillo', daysToMaturity: 85, tempLower: 75, tempUpper: 95, tolerance: 'moderate', maxWeeksOutside: 3, size: 'XL', spacing: 12, category: 'Vegetable' },
-    { name: 'Tomato (Fall)', daysToMaturity: 80, tempLower: 70, tempUpper: 90, tolerance: 'moderate', maxWeeksOutside: 3, size: 'XL', spacing: 9, category: 'Vegetable' },
-    { name: 'Tomato (Spring)', daysToMaturity: 80, tempLower: 70, tempUpper: 90, tolerance: 'moderate', maxWeeksOutside: 3, size: 'XL', spacing: 9, category: 'Vegetable' },
-    { name: 'Watermelon', daysToMaturity: 80, tempLower: 70, tempUpper: 90, tolerance: 'moderate', maxWeeksOutside: 3, size: 'XL', spacing: 12, category: 'Fruit' },
-    { name: 'Wild Bergamot', daysToMaturity: 365, tempLower: 40, tempUpper: 95, tolerance: 'moderate', maxWeeksOutside: 3, size: 'M', spacing: 4.5, category: 'Herb' },
-    { name: 'Windsor Bean', daysToMaturity: 75, tempLower: 60, tempUpper: 70, tolerance: 'strict', maxWeeksOutside: 2, size: 'S', spacing: 3, category: 'Vegetable' }
-  ];
+const [plantDatabase, setPlantDatabase] = useState([]);
+const [loadingPlants, setLoadingPlants] = useState(false);
+
+// Fetch plants from backend
+React.useEffect(() => {
+  const fetchPlants = async () => {
+    try {
+      setLoadingPlants(true);
+      const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/plants`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch plants');
+      }
+      
+      const data = await response.json();
+      setPlantDatabase(data.plants);
+      setLoadingPlants(false);
+      
+    } catch (error) {
+      console.error('Error fetching plants:', error);
+      setPlantDatabase([]);
+      setLoadingPlants(false);
+    }
+  };
+  
+  fetchPlants();
+}, []);
 
   // Fetch weather data from Open-Meteo API
   // Uses PREVIOUS year's weather relative to target planting date
@@ -1033,7 +980,10 @@ function App() {
           Vegetable Bed Planting Tool
         </h1>
         <p className="text-gray-600 mb-6">Find the optimal planting window for your garden</p>
-
+        <p className="text-gray-600 mb-6">
+          Find the optimal planting window for your garden
+          {loadingPlants && <span> • Loading plants...</span>}
+        </p>
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
