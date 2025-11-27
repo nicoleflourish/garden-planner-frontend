@@ -42,7 +42,33 @@ React.useEffect(() => {
   
   fetchPlants();
 }, []);
-
+  // Iframe height communication for embedding
+    React.useEffect(() => {
+      const sendHeight = () => {
+        const height = document.documentElement.scrollHeight;
+        window.parent.postMessage({ 
+          type: 'garden-planner-height',
+          height: height 
+        }, '*');
+      };
+      
+      // Send height initially and on resize
+      sendHeight();
+      window.addEventListener('resize', sendHeight);
+      
+      // Send height when content changes
+      const observer = new MutationObserver(sendHeight);
+      observer.observe(document.body, { 
+        childList: true, 
+        subtree: true, 
+        attributes: true 
+      });
+      
+      return () => {
+        window.removeEventListener('resize', sendHeight);
+        observer.disconnect();
+      };
+    }, []);
   // Fetch weather data from Open-Meteo API
   // Uses PREVIOUS year's weather relative to target planting date
   const fetchWeatherData = async (zip, targetYear) => {
