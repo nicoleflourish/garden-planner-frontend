@@ -374,7 +374,30 @@ React.useEffect(() => {
     setGeneratedLayout(layout);
     setShowLayout(true);
   };
-
+// Generate unique color palette for plants in this layout
+const generatePlantColors = (layoutItems) => {
+  const uniquePlants = [...new Set(layoutItems.map(item => item.plant.name))];
+  const colors = {};
+  
+  // Color palettes by category
+  const categoryColors = {
+    'Herb': ['#6B8E23', '#556B2F', '#8B7355', '#228B22', '#7CFC00', '#98FF98'],
+    'Flower': ['#DAA520', '#FFD700', '#FF6347', '#9370DB', '#FF1493', '#FFB347'],
+    'Vegetable': ['#8B2F39', '#D2691E', '#FF8C42', '#DC143C', '#2F4F4F', '#9CAF88', '#C1440E', '#4A7C59']
+  };
+  
+  // Assign colors to each unique plant
+  uniquePlants.forEach((plantName, index) => {
+    const plantData = layoutItems.find(item => item.plant.name === plantName)?.plant;
+    const category = plantData?.category || 'Vegetable';
+    const palette = categoryColors[category] || categoryColors['Vegetable'];
+    
+    // Cycle through palette colors
+    colors[plantName] = palette[index % palette.length];
+  });
+  
+  return colors;
+};
   const generateSmartLayout = () => {
     const selectedPlantObjects = selectedPlants.map(name => 
       plantDatabase.find(p => p.name === name)
