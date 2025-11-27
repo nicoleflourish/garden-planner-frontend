@@ -483,12 +483,19 @@ const generatePlantColors = (layoutItems) => {
         }
       }
     }
-
+  
     // Calculate capacity limits FIRST
     const perimeter = (bedLength * 2) + (bedWidth * 2);
     const maxHerbs = perimeter - 4;
     const maxFlowers = perimeter - 6;
-
+  
+    // After center plants placed
+    console.log('After center placement:', {
+      layoutLength: layout.length,
+      centerPlants: layout.filter(l => l.location === 'center').length
+    });
+    // STEP 2: Place CORNER plants (herbs)
+    console.log('Corner plants available:', perennialHerbs.map(p => p.name));
     // STEP 2: Place CORNERS (Medium herbs > Small herbs/flowers)
     const mediumHerbs = mediumPlants.filter(p => p.category === 'Herb');
     const smallFlowersHerbs = smallPlants.filter(p => p.category === 'Flower' || p.category === 'Herb');
@@ -523,8 +530,14 @@ const generatePlantColors = (layoutItems) => {
       
       console.log('Placed in corners:', cornerPlants[0].name, 'count:', cornersPlaced);
     }
-
-    // STEP 3: Place BORDER - Reserve gaps next to corners, distribute remaining plants
+      console.log('After corner placement:', {
+        layoutLength: layout.length,
+        cornerPlants: layout.filter(l => l.location === 'corner').length
+      });
+    
+    // STEP 3: Place BORDER plants (small plants)
+    console.log('Border plants available:', smallPlants.map(p => p.name));
+      // STEP 3: Place BORDER - Reserve gaps next to corners, distribute remaining plants
     const borderSmallPlants = smallPlants.filter(p => p.category === 'Flower' || p.category === 'Herb');
     const allBorderPositions = []; // Track all border positions
     let totalGapInches = 0;
@@ -671,6 +684,13 @@ const generatePlantColors = (layoutItems) => {
       
       console.log('Border plants placed:', plantsPlaced);
     }
+      console.log('After border placement:', {
+        layoutLength: layout.length,
+        borderPlants: layout.filter(l => l.location === 'perimeter').length
+      });
+
+    // STEP 4: Place XS plants in clusters
+    console.log('XS plants available:', xsPlants.map(p => p.name));
 
     // STEP 4: Fill ALL available space with XS veggie clusters
     const xsVeggies = xsPlants.filter(p => p.category === 'Vegetable');
@@ -786,7 +806,10 @@ const generatePlantColors = (layoutItems) => {
       
       console.log('XS clusters placed:', gaps.length);
     }
-
+      console.log('After XS placement:', {
+        layoutLength: layout.length,
+        xsPlants: layout.filter(l => l.location === 'inner-ring').length
+      });
     // STEP 5: Place MEDIUM vegetables with overlap tolerance (6 sq inches max)
     const mediumVeggies = mediumPlants.filter(p => p.category === 'Vegetable');
     if (mediumVeggies.length > 0) {
@@ -1002,7 +1025,6 @@ const generatePlantColors = (layoutItems) => {
           <Sprout className="w-8 h-8" />
           Vegetable Bed Planting Tool
         </h1>
-        <p className="text-gray-600 mb-6">Find the optimal planting window for your garden</p>
         <p className="text-gray-600 mb-6">
           Find the optimal planting window for your garden
           {loadingPlants && <span> • Loading plants...</span>}
