@@ -538,7 +538,9 @@ const generatePlantColors = (layoutItems) => {
     // STEP 3: Place BORDER plants (small plants)
     console.log('Border plants available:', smallPlants.map(p => p.name));
       // STEP 3: Place BORDER - Reserve gaps next to corners, distribute remaining plants
-    const borderSmallPlants = smallPlants.filter(p => p.category === 'Flower' || p.category === 'Herb');
+    const borderSmallPlants = smallPlants.length > 0 
+  ? smallPlants 
+  : mediumPlants.slice(0, 3); // Use first 3 medium plants if no small ones
     const allBorderPositions = []; // Track all border positions
     let totalGapInches = 0;
     let totalPlants = 0;
@@ -805,6 +807,63 @@ const generatePlantColors = (layoutItems) => {
       });
       
       console.log('XS clusters placed:', gaps.length);
+      // Fallback: If no gaps found, place XS clusters around entire perimeter
+      if (gaps.length === 0 && xsVeggies.length > 0) {
+        console.log('No gaps found - using fallback perimeter placement');
+        
+        const perimeterLengthPx = (bedLengthInches * 2 + bedWidthInches * 2) * pixelsPerInch;
+        const maxClusters = Math.floor(perimeterLengthPx / xsClusterDiameterPx);
+        const clusterSpacing = perimeterLengthPx / maxClusters;
+        
+        for (let i = 0; i < maxClusters; i++) {
+          const distanceAlongPerimeter = i * clusterSpacing + (clusterSpacing / 2);
+          let x, y;
+          
+          const topLength = bedLengthInches * pixelsPerInch;
+          const rightLength = bedWidthInches * pixelsPerInch;
+          const bottomLength = bedLengthInches * pixelsPerInch;
+          
+          // Calculate position along perimeter
+          if (distanceAlongPerimeter < topLength) {
+            // Top edge
+            x = edgeMargin + distanceAlongPerimeter;
+            y = edgeMargin + xsRadius * 2;
+          } else if (distanceAlongPerimeter < topLength + rightLength) {
+            // Right edge
+            x = svgWidth - edgeMargin - xsRadius * 2;
+            y = edgeMargin + (distanceAlongPerimeter - topLength);
+          } else if (distanceAlongPerimeter < topLength + rightLength + bottomLength) {
+            // Bottom edge
+            x = svgWidth - edgeMargin - (distanceAlongPerimeter - topLength - rightLength);
+            y = svgHeight - edgeMargin - xsRadius * 2;
+          } else {
+            // Left edge
+            x = edgeMargin + xsRadius * 2;
+            y = svgHeight - edgeMargin - (distanceAlongPerimeter - topLength - rightLength - bottomLength);
+          }
+          
+          // Check for overlap with center plants
+          const hasOverlap = layout.some(item => {
+            const dx = item.x - x;
+            const dy = item.y - y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const minDistance = (item.plant.spacing * pixelsPerInch) + (xsRadius * 2);
+            return distance < minDistance;
+          });
+          
+          if (!hasOverlap) {
+            // Place 2x2 cluster
+            const plant = xsVeggies[0];
+            const offset = xsRadius * 0.7;
+            layout.push({ plant, x: x - offset, y: y - offset, location: 'perimeter', cluster: true });
+            layout.push({ plant, x: x + offset, y: y - offset, location: 'perimeter', cluster: true });
+            layout.push({ plant, x: x - offset, y: y + offset, location: 'perimeter', cluster: true });
+            layout.push({ plant, x: x + offset, y: y + offset, location: 'perimeter', cluster: true });
+          }
+        }
+        
+        console.log('Fallback XS clusters placed around perimeter');
+      }
     }
       console.log('After XS placement:', {
         layoutLength: layout.length,
