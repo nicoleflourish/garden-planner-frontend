@@ -1427,7 +1427,6 @@ React.useEffect(() => {
                     
                     // Use same color mapping as main display
                     const plantColors = generatePlantColors(generatedLayout);
-                    
                     const color = plantColors[plant.name] || '#6B8E23';
                     
                     // Determine shape for key icon
