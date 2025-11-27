@@ -1183,73 +1183,65 @@ React.useEffect(() => {
                   const radius = plant.spacing * 4;
                   
                   // Assign unique colors per plant name
-                  const plantColors = {
-                    'Radish': '#8B2F39',
-                    'Beets (Fall)': '#8B2F39',
-                    'Beets (Spring)': '#8B2F39',
-                    'Lettuce': '#90C695',
-                    'Basil': '#6B8E23',
-                    'Broccoli': '#4A7C59',
-                    'Tomato (Fall)': '#C1440E',
-                    'Tomato (Spring)': '#C1440E',
-                    'Carrot (Fall)': '#D2691E',
-                    'Carrot (Spring)': '#D2691E',
-                    'Calendula': '#DAA520',
-                    'Sweet Peppers': '#FF8C42',
-                    'Spicy Peppers': '#DC143C',
-                    'Kale (Fall)': '#2F4F4F',
-                    'Kale (Spring)': '#2F4F4F',
-                    'Summer Squash': '#9CAF88',
-                    'Cucumber (Fall)': '#6B8E23',
-                    'Cucumber (Spring)': '#6B8E23',
-                    'Thyme': '#8B7355',
-                    'Rosemary': '#556B2F',
-                    'Lavender': '#9370DB',
-                    'Mint': '#98FF98',
-                    'Parsley': '#228B22',
-                    'Cilantro': '#7CFC00',
-                    'Oregano': '#556B2F',
-                    'Marigold': '#FFD700',
-                    'Nasturtium': '#FF6347',
-                    'Pansy': '#9370DB',
-                    'Strawberry': '#DC143C',
-                    'Pumpkin': '#FF8C00',
-                    'Watermelon': '#FF1493',
-                    'Melon': '#FFB347',
-                    'Eggplant': '#4B0082',
-                    'Corn': '#F4A460',
-                    'Onion (Fall)': '#DEB887'
+                 // Generate unique color palette for plants in this layout
+                const generatePlantColors = (layoutItems) => {
+                  const uniquePlants = [...new Set(layoutItems.map(item => item.plant.name))];
+                  const colors = {};
+                  
+                  // Color palettes by category
+                  const categoryColors = {
+                    'Herb': ['#6B8E23', '#556B2F', '#8B7355', '#228B22', '#7CFC00', '#98FF98'],
+                    'Flower': ['#DAA520', '#FFD700', '#FF6347', '#9370DB', '#FF1493', '#FFB347'],
+                    'Vegetable': ['#8B2F39', '#D2691E', '#FF8C42', '#DC143C', '#2F4F4F', '#9CAF88', '#C1440E', '#4A7C59']
                   };
+                  
+                  // Assign colors to each unique plant
+                  uniquePlants.forEach((plantName, index) => {
+                    const plantData = layoutItems.find(item => item.plant.name === plantName)?.plant;
+                    const category = plantData?.category || 'Vegetable';
+                    const palette = categoryColors[category] || categoryColors['Vegetable'];
+                    
+                    // Cycle through palette colors
+                    colors[plantName] = palette[index % palette.length];
+                  });
+                  
+                  return colors;
+                };
+
+                const plantColors = generatePlantColors(generatedLayout);
                   
                   const color = plantColors[plant.name] || '#6B8E23';
                   
                   // Assign shapes based on plant name for variety
-                  const getPlantShape = (plantName) => {
-                    // XS plants: simple shapes
-                    if (plant.size === 'XS') {
-                      if (plantName.includes('Beets')) return 'x-shape';
-                      if (plantName.includes('Carrot')) return 'diamond';
-                      if (plantName.includes('Radish')) return 'circle';
-                      return 'circle';
+                  const getPlantShape = (plantObj) => {
+                    const category = plantObj.category || 'Vegetable';
+                    const size = plantObj.size;
+                    
+                    // Herbs: Always flower shapes (varying petals by size)
+                    if (category === 'Herb') {
+                      if (size === 'XS') return 'flower-6';
+                      if (size === 'S') return 'flower-8';
+                      if (size === 'M') return 'flower-10';
+                      return 'flower-12';
                     }
-                    // S plants: 6-8 petal flowers
-                    if (plant.size === 'S') {
-                      if (plantName.includes('Lettuce')) return 'clover-4';
-                      return 'flower-8';
+                    
+                    // Flowers: Always flower shapes with more petals
+                    if (category === 'Flower') {
+                      if (size === 'XS') return 'flower-8';
+                      if (size === 'S') return 'flower-10';
+                      if (size === 'M') return 'flower-12';
+                      return 'flower-12';
                     }
-                    // M plants: varied medium shapes
-                    if (plant.size === 'M') {
-                      if (plantName.includes('Calendula')) return 'flower-12';
-                      if (plantName.includes('Pepper')) return 'flower-10';
-                      if (plantName.includes('Kale')) return 'flower-8';
-                      if (plantName.includes('Marigold')) return 'flower-12';
-                      return 'cloud';
-                    }
-                    // L/XL plants: large scalloped shapes
-                    return 'scallop';
+                    
+                    // Vegetables: Varied shapes by size
+                    if (size === 'XS') return 'x-shape';      // Root veggies
+                    if (size === 'S') return 'clover-4';       // Small veggies
+                    if (size === 'M') return 'cloud';          // Medium veggies
+                    if (size === 'L') return 'scallop';        // Large veggies
+                    return 'scallop';                          // XL veggies
                   };
                   
-                  const shapeType = getPlantShape(plant.name);
+                  const shapeType = getPlantShape(plant);
                   
                   // X-shape (for Beets)
                   if (shapeType === 'x-shape') {
@@ -1381,6 +1373,47 @@ React.useEffect(() => {
                     return <path key={idx} d={path} fill={color} opacity="0.9" />;
                   }
                   
+                  // 6-petal flower
+                  if (shapeType === 'flower-6') {
+                    return (
+                      <g key={idx} opacity="0.9">
+                        <circle cx={x} cy={y} r={radius * 0.4} fill={color} />
+                        {[0, 1, 2, 3, 4, 5].map(i => {
+                          const angle = (i * Math.PI * 2) / 6 - Math.PI / 2;
+                          return (
+                            <circle
+                              key={i}
+                              cx={x + Math.cos(angle) * radius * 0.7}
+                              cy={y + Math.sin(angle) * radius * 0.7}
+                              r={radius * 0.35}
+                              fill={color}
+                            />
+                          );
+                        })}
+                      </g>
+                    );
+                  }
+
+                  // 10-petal flower
+                  if (shapeType === 'flower-10') {
+                    return (
+                      <g key={idx} opacity="0.9">
+                        <circle cx={x} cy={y} r={radius * 0.4} fill={color} />
+                        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => {
+                          const angle = (i * Math.PI * 2) / 10 - Math.PI / 2;
+                          return (
+                            <circle
+                              key={i}
+                              cx={x + Math.cos(angle) * radius * 0.7}
+                              cy={y + Math.sin(angle) * radius * 0.7}
+                              r={radius * 0.3}
+                              fill={color}
+                            />
+                          );
+                        })}
+                      </g>
+                    );
+                  }
                   return null;
                 })}
               </svg>
@@ -1393,43 +1426,8 @@ React.useEffect(() => {
                     if (!plant) return null;
                     
                     // Use same color mapping as main display
-                    const plantColors = {
-                      'Radish': '#8B2F39',
-                      'Beets (Fall)': '#8B2F39',
-                      'Beets (Spring)': '#8B2F39',
-                      'Lettuce': '#90C695',
-                      'Basil': '#6B8E23',
-                      'Broccoli': '#4A7C59',
-                      'Tomato (Fall)': '#C1440E',
-                      'Tomato (Spring)': '#C1440E',
-                      'Carrot (Fall)': '#D2691E',
-                      'Carrot (Spring)': '#D2691E',
-                      'Calendula': '#DAA520',
-                      'Sweet Peppers': '#FF8C42',
-                      'Spicy Peppers': '#DC143C',
-                      'Kale (Fall)': '#2F4F4F',
-                      'Kale (Spring)': '#2F4F4F',
-                      'Summer Squash': '#9CAF88',
-                      'Cucumber (Fall)': '#6B8E23',
-                      'Cucumber (Spring)': '#6B8E23',
-                      'Thyme': '#8B7355',
-                      'Rosemary': '#556B2F',
-                      'Lavender': '#9370DB',
-                      'Mint': '#98FF98',
-                      'Parsley': '#228B22',
-                      'Cilantro': '#7CFC00',
-                      'Oregano': '#556B2F',
-                      'Marigold': '#FFD700',
-                      'Nasturtium': '#FF6347',
-                      'Pansy': '#9370DB',
-                      'Strawberry': '#DC143C',
-                      'Pumpkin': '#FF8C00',
-                      'Watermelon': '#FF1493',
-                      'Melon': '#FFB347',
-                      'Eggplant': '#4B0082',
-                      'Corn': '#F4A460',
-                      'Onion (Fall)': '#DEB887'
-                    };
+                    const plantColors = generatePlantColors(generatedLayout);
+                    
                     const color = plantColors[plant.name] || '#6B8E23';
                     
                     // Determine shape for key icon
