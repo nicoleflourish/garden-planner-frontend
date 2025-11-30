@@ -626,54 +626,58 @@ const generatePlantColors = (layoutItems) => {
       
       // Calculate how many units go on each edge proportionally
       const totalEdgeLength = (topBottomLength * 2) + (leftRightLength * 2);
-      const unitsOnTop = Math.round(borderPlantsToPlace * (topBottomLength / totalEdgeLength));
-      const unitsOnRight = Math.round(borderPlantsToPlace * (leftRightLength / totalEdgeLength));
-      const unitsOnBottom = Math.round(borderPlantsToPlace * (topBottomLength / totalEdgeLength));
+      const unitsOnTop = Math.floor(borderPlantsToPlace * (topBottomLength / totalEdgeLength));
+      const unitsOnRight = Math.floor(borderPlantsToPlace * (leftRightLength / totalEdgeLength));
+      const unitsOnBottom = Math.floor(borderPlantsToPlace * (topBottomLength / totalEdgeLength));
       const unitsOnLeft = borderPlantsToPlace - unitsOnTop - unitsOnRight - unitsOnBottom;
       
       console.log('Units per edge:', { unitsOnTop, unitsOnRight, unitsOnBottom, unitsOnLeft, total: borderPlantsToPlace });
       
       let plantsPlaced = 0;
       
-      // Top edge - distribute units evenly
+      // Top edge - distribute units evenly with proper centering
       if (unitsOnTop > 0) {
-        const topSpacing = topBottomLength / unitsOnTop;
+        const availableSpace = topBottomLength - (2 * smallRadius); // Space minus first/last plant radius
+        const spacing = unitsOnTop > 1 ? availableSpace / (unitsOnTop - 1) : 0;
         for (let i = 0; i < unitsOnTop; i++) {
-          const x = cornerBuffer + startOffset + (i * topSpacing);
+          const x = cornerBuffer + smallRadius + (i * spacing);
           const y = borderMargin + smallRadius;
           placeUnit(x, y, plantsPlaced);
           plantsPlaced++;
         }
       }
       
-      // Right edge - distribute units evenly
+      // Right edge - distribute units evenly with proper centering
       if (unitsOnRight > 0) {
-        const rightSpacing = leftRightLength / unitsOnRight;
+        const availableSpace = leftRightLength - (2 * smallRadius);
+        const spacing = unitsOnRight > 1 ? availableSpace / (unitsOnRight - 1) : 0;
         for (let i = 0; i < unitsOnRight; i++) {
           const x = svgWidth - borderMargin - smallRadius;
-          const y = cornerBuffer + startOffset + (i * rightSpacing);
+          const y = cornerBuffer + smallRadius + (i * spacing);
           placeUnit(x, y, plantsPlaced);
           plantsPlaced++;
         }
       }
       
-      // Bottom edge - distribute units evenly
+      // Bottom edge - distribute units evenly with proper centering
       if (unitsOnBottom > 0) {
-        const bottomSpacing = topBottomLength / unitsOnBottom;
+        const availableSpace = topBottomLength - (2 * smallRadius);
+        const spacing = unitsOnBottom > 1 ? availableSpace / (unitsOnBottom - 1) : 0;
         for (let i = 0; i < unitsOnBottom; i++) {
-          const x = svgWidth - cornerBuffer - startOffset - (i * bottomSpacing);
+          const x = svgWidth - cornerBuffer - smallRadius - (i * spacing);
           const y = svgHeight - borderMargin - smallRadius;
           placeUnit(x, y, plantsPlaced);
           plantsPlaced++;
         }
       }
       
-      // Left edge - distribute units evenly
+      // Left edge - distribute units evenly with proper centering
       if (unitsOnLeft > 0) {
-        const leftSpacing = leftRightLength / unitsOnLeft;
+        const availableSpace = leftRightLength - (2 * smallRadius);
+        const spacing = unitsOnLeft > 1 ? availableSpace / (unitsOnLeft - 1) : 0;
         for (let i = 0; i < unitsOnLeft; i++) {
           const x = borderMargin + smallRadius;
-          const y = svgHeight - cornerBuffer - startOffset - (i * leftSpacing);
+          const y = svgHeight - cornerBuffer - smallRadius - (i * spacing);
           placeUnit(x, y, plantsPlaced);
           plantsPlaced++;
         }
