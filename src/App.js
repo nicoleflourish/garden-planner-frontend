@@ -584,7 +584,7 @@ const generatePlantColors = (layoutItems) => {
     
     if (borderUnits.length > 0) {
       const smallRadius = borderUnits[0].plant.spacing * pixelsPerInch;
-      const plantDiameter = borderUnits[0].plant.spacing * 2;
+      const plantDiameter = borderUnits[0].isCluster ? 6 : (borderUnits[0].plant.spacing * 2);
       const borderMargin = 18;
       
       // Calculate actual corner plant size
