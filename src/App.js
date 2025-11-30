@@ -605,7 +605,8 @@ const generatePlantColors = (layoutItems) => {
       
       const cornerPlantRadius = cornerPlants.length > 0 ? (cornerPlants[0].spacing * pixelsPerInch) : 0;
       const edgeMargin = 15;
-      const startOffset = cornerPlantRadius + gapSpacingPx + smallRadius;
+      // Start border plants after corner plant radius + border plant radius
+      const startOffset = cornerPlantRadius + smallRadius;
       
       // Helper to place unit (single or cluster)
       const placeUnit = (x, y, unitIndex) => {
