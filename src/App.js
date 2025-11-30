@@ -580,7 +580,6 @@ const generatePlantColors = (layoutItems) => {
     console.log('Border units:', borderUnits.map(u => ({ name: u.plant.name, isCluster: u.isCluster })));
     
     // If no traditional corner plants were placed, use border units for corners
-    cornerUnitsUsed = 0;  // Reset (already declared earlier)
     if (cornersPlaced === 0 && borderUnits.length > 0) {
       const edgeMargin = 15;
       const unit = borderUnits[0];
@@ -674,15 +673,14 @@ const generatePlantColors = (layoutItems) => {
       };
       
       // Calculate how many units go on each edge proportionally
-      // Subtract corner units that were already placed
-      const remainingBorderUnits = borderPlantsToPlace - cornerUnitsUsed;
+      // Note: borderPlantsToPlace already accounts for corner space, so use it directly
       const totalEdgeLength = (topBottomAvailable * 2) + (leftRightAvailable * 2);
-      const unitsOnTop = Math.floor(remainingBorderUnits * (topBottomAvailable / totalEdgeLength));
-      const unitsOnRight = Math.floor(remainingBorderUnits * (leftRightAvailable / totalEdgeLength));
-      const unitsOnBottom = Math.floor(remainingBorderUnits * (topBottomAvailable / totalEdgeLength));
-      const unitsOnLeft = remainingBorderUnits - unitsOnTop - unitsOnRight - unitsOnBottom;
+      const unitsOnTop = Math.floor(borderPlantsToPlace * (topBottomAvailable / totalEdgeLength));
+      const unitsOnRight = Math.floor(borderPlantsToPlace * (leftRightAvailable / totalEdgeLength));
+      const unitsOnBottom = Math.floor(borderPlantsToPlace * (topBottomAvailable / totalEdgeLength));
+      const unitsOnLeft = borderPlantsToPlace - unitsOnTop - unitsOnRight - unitsOnBottom;
       
-      console.log('Units per edge:', { unitsOnTop, unitsOnRight, unitsOnBottom, unitsOnLeft, cornerUnitsUsed, remainingBorderUnits, total: borderPlantsToPlace });
+      console.log('Units per edge:', { unitsOnTop, unitsOnRight, unitsOnBottom, unitsOnLeft, cornerUnitsUsed, total: borderPlantsToPlace });
       
       let plantsPlaced = 0;
       
