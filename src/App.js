@@ -593,31 +593,15 @@ const generatePlantColors = (layoutItems) => {
       const totalPerimeterPx = (topBottomLength * 2) + (leftRightLength * 2);
       const totalPerimeterInches = totalPerimeterPx / pixelsPerInch;
       
-      const cornerPlantDiameter = cornerPlants.length > 0 ? cornerPlants[0].spacing * 2 : 0;
-      const cornerOccupiedInches = cornersPlaced * cornerPlantDiameter;
-      
       // DYNAMIC CAPACITY - calculate how many border units actually fit
-      const availablePerimeter = totalPerimeterInches - cornerOccupiedInches;
-      const borderPlantsToPlace = Math.floor(availablePerimeter / plantDiameter);
-      
-      const totalPlants = cornersPlaced + borderPlantsToPlace;
-      const borderOccupiedInches = borderPlantsToPlace * plantDiameter;
-      const totalOccupiedInches = cornerOccupiedInches + borderOccupiedInches;
-      const totalGapInches = totalPerimeterInches - totalOccupiedInches;
-      const gapSpacingInches = totalGapInches / totalPlants;
-      const gapSpacingPx = gapSpacingInches * pixelsPerInch;
+      // Note: cornerBuffer already excludes corner space, so no need to subtract corner diameters again
+      const borderPlantsToPlace = Math.floor(totalPerimeterInches / plantDiameter);
       
       console.log('Dynamic border capacity:', {
         totalPerimeterInches,
-        availablePerimeter,
         plantDiameter,
-        borderPlantsToPlace,
-        totalPlants,
-        gapSpacingInches
+        borderPlantsToPlace
       });
-      
-      const plantPlusGapInches = plantDiameter + gapSpacingInches;
-      const plantPlusGapPx = plantPlusGapInches * pixelsPerInch;
       
       const cornerPlantRadius = cornerPlants.length > 0 ? (cornerPlants[0].spacing * pixelsPerInch) : 0;
       const edgeMargin = 15;
