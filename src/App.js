@@ -316,6 +316,7 @@ const processWeatherDataDirect = (weatherDataInput) => {
       if (!plantSeasons.includes(fromSeason) && !plantSeasons.includes(toSeason)) return false;
       return canPlantMatureInWindow(plant, plantingWindow, seasonData);
     });
+  
   };
 
   const findPlantingWindow = (dateStr) => {
