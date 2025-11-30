@@ -639,46 +639,59 @@ const generatePlantColors = (layoutItems) => {
         allBorderPositions.push({ x, y, hasPlant: true });
       };
       
-      let currentDistance = startOffset;
+      // Calculate how many units go on each edge proportionally
+      const totalEdgeLength = (topBottomLength * 2) + (leftRightLength * 2);
+      const unitsOnTop = Math.round(borderPlantsToPlace * (topBottomLength / totalEdgeLength));
+      const unitsOnRight = Math.round(borderPlantsToPlace * (leftRightLength / totalEdgeLength));
+      const unitsOnBottom = Math.round(borderPlantsToPlace * (topBottomLength / totalEdgeLength));
+      const unitsOnLeft = borderPlantsToPlace - unitsOnTop - unitsOnRight - unitsOnBottom;
+      
+      console.log('Units per edge:', { unitsOnTop, unitsOnRight, unitsOnBottom, unitsOnLeft, total: borderPlantsToPlace });
+      
       let plantsPlaced = 0;
       
-      // Top edge
-      while (currentDistance + smallRadius < topBottomLength - startOffset + smallRadius && plantsPlaced < borderPlantsToPlace) {
-        const x = cornerBuffer + currentDistance;
-        const y = borderMargin + smallRadius;
-        placeUnit(x, y, plantsPlaced);
-        plantsPlaced++;
-        currentDistance += plantPlusGapPx;
+      // Top edge - distribute units evenly
+      if (unitsOnTop > 0) {
+        const topSpacing = topBottomLength / unitsOnTop;
+        for (let i = 0; i < unitsOnTop; i++) {
+          const x = cornerBuffer + startOffset + (i * topSpacing);
+          const y = borderMargin + smallRadius;
+          placeUnit(x, y, plantsPlaced);
+          plantsPlaced++;
+        }
       }
       
-      // Right edge
-      currentDistance = startOffset;
-      while (currentDistance + smallRadius < leftRightLength - startOffset + smallRadius && plantsPlaced < borderPlantsToPlace) {
-        const x = svgWidth - borderMargin - smallRadius;
-        const y = cornerBuffer + currentDistance;
-        placeUnit(x, y, plantsPlaced);
-        plantsPlaced++;
-        currentDistance += plantPlusGapPx;
+      // Right edge - distribute units evenly
+      if (unitsOnRight > 0) {
+        const rightSpacing = leftRightLength / unitsOnRight;
+        for (let i = 0; i < unitsOnRight; i++) {
+          const x = svgWidth - borderMargin - smallRadius;
+          const y = cornerBuffer + startOffset + (i * rightSpacing);
+          placeUnit(x, y, plantsPlaced);
+          plantsPlaced++;
+        }
       }
       
-      // Bottom edge
-      currentDistance = startOffset;
-      while (currentDistance + smallRadius < topBottomLength - startOffset + smallRadius && plantsPlaced < borderPlantsToPlace) {
-        const x = svgWidth - cornerBuffer - currentDistance;
-        const y = svgHeight - borderMargin - smallRadius;
-        placeUnit(x, y, plantsPlaced);
-        plantsPlaced++;
-        currentDistance += plantPlusGapPx;
+      // Bottom edge - distribute units evenly
+      if (unitsOnBottom > 0) {
+        const bottomSpacing = topBottomLength / unitsOnBottom;
+        for (let i = 0; i < unitsOnBottom; i++) {
+          const x = svgWidth - cornerBuffer - startOffset - (i * bottomSpacing);
+          const y = svgHeight - borderMargin - smallRadius;
+          placeUnit(x, y, plantsPlaced);
+          plantsPlaced++;
+        }
       }
       
-      // Left edge
-      currentDistance = startOffset;
-      while (currentDistance + smallRadius < leftRightLength - startOffset + smallRadius && plantsPlaced < borderPlantsToPlace) {
-        const x = borderMargin + smallRadius;
-        const y = svgHeight - cornerBuffer - currentDistance;
-        placeUnit(x, y, plantsPlaced);
-        plantsPlaced++;
-        currentDistance += plantPlusGapPx;
+      // Left edge - distribute units evenly
+      if (unitsOnLeft > 0) {
+        const leftSpacing = leftRightLength / unitsOnLeft;
+        for (let i = 0; i < unitsOnLeft; i++) {
+          const x = borderMargin + smallRadius;
+          const y = svgHeight - cornerBuffer - startOffset - (i * leftSpacing);
+          placeUnit(x, y, plantsPlaced);
+          plantsPlaced++;
+        }
       }
       
       console.log('Border units placed:', plantsPlaced);
