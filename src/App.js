@@ -586,27 +586,32 @@ const generatePlantColors = (layoutItems) => {
       const smallRadius = borderUnits[0].plant.spacing * pixelsPerInch;
       const plantDiameter = borderUnits[0].plant.spacing * 2;
       const borderMargin = 18;
-      const cornerBuffer = cornerPlants.length > 0 ? cornerPlants[0].spacing * pixelsPerInch * 2.5 : smallRadius * 3;
       
-      const topBottomLength = (bedLengthInches * pixelsPerInch) - (2 * cornerBuffer);
-      const leftRightLength = (bedWidthInches * pixelsPerInch) - (2 * cornerBuffer);
-      const totalPerimeterPx = (topBottomLength * 2) + (leftRightLength * 2);
-      const totalPerimeterInches = totalPerimeterPx / pixelsPerInch;
+      // Calculate actual corner plant size
+      const cornerPlantDiameter = cornerPlants.length > 0 ? cornerPlants[0].spacing * 2 : 0;
+      const cornerPlantRadius = cornerPlantDiameter / 2;
+      const cornerPlantRadiusPx = cornerPlantRadius * pixelsPerInch;
       
-      // DYNAMIC CAPACITY - calculate how many border units actually fit
-      // Note: cornerBuffer already excludes corner space, so no need to subtract corner diameters again
-      const borderPlantsToPlace = Math.floor(totalPerimeterInches / plantDiameter);
+      // Each edge has 2 corners, each corner takes up its full diameter on that edge
+      const topBottomAvailable = bedLengthInches - (2 * cornerPlantDiameter);  // e.g., 72" - 18" = 54"
+      const leftRightAvailable = bedWidthInches - (2 * cornerPlantDiameter);   // e.g., 36" - 18" = 18"
+      const totalAvailablePerimeter = (topBottomAvailable * 2) + (leftRightAvailable * 2);  // e.g., 144"
+      
+      // DYNAMIC CAPACITY - how many border units fit in available space
+      const borderPlantsToPlace = Math.floor(totalAvailablePerimeter / plantDiameter);
       
       console.log('Dynamic border capacity:', {
-        totalPerimeterInches,
+        bedLengthInches,
+        bedWidthInches,
+        cornerPlantDiameter,
+        topBottomAvailable,
+        leftRightAvailable,
+        totalAvailablePerimeter,
         plantDiameter,
         borderPlantsToPlace
       });
       
-      const cornerPlantRadius = cornerPlants.length > 0 ? (cornerPlants[0].spacing * pixelsPerInch) : 0;
       const edgeMargin = 15;
-      // Start border plants after corner plant radius + border plant radius
-      const startOffset = cornerPlantRadius + smallRadius;
       
       // Helper to place unit (single or cluster)
       const placeUnit = (x, y, unitIndex) => {
@@ -625,59 +630,56 @@ const generatePlantColors = (layoutItems) => {
       };
       
       // Calculate how many units go on each edge proportionally
-      const totalEdgeLength = (topBottomLength * 2) + (leftRightLength * 2);
-      const unitsOnTop = Math.floor(borderPlantsToPlace * (topBottomLength / totalEdgeLength));
-      const unitsOnRight = Math.floor(borderPlantsToPlace * (leftRightLength / totalEdgeLength));
-      const unitsOnBottom = Math.floor(borderPlantsToPlace * (topBottomLength / totalEdgeLength));
+      const totalEdgeLength = (topBottomAvailable * 2) + (leftRightAvailable * 2);
+      const unitsOnTop = Math.floor(borderPlantsToPlace * (topBottomAvailable / totalEdgeLength));
+      const unitsOnRight = Math.floor(borderPlantsToPlace * (leftRightAvailable / totalEdgeLength));
+      const unitsOnBottom = Math.floor(borderPlantsToPlace * (topBottomAvailable / totalEdgeLength));
       const unitsOnLeft = borderPlantsToPlace - unitsOnTop - unitsOnRight - unitsOnBottom;
       
       console.log('Units per edge:', { unitsOnTop, unitsOnRight, unitsOnBottom, unitsOnLeft, total: borderPlantsToPlace });
       
       let plantsPlaced = 0;
+      const cornerOffsetPx = cornerPlantRadiusPx + edgeMargin;
       
-      // Top edge - distribute units evenly with proper centering
+      // Top edge - start after left corner, distribute evenly to right corner
       if (unitsOnTop > 0) {
-        const availableSpace = topBottomLength - (2 * smallRadius); // Space minus first/last plant radius
-        const spacing = unitsOnTop > 1 ? availableSpace / (unitsOnTop - 1) : 0;
+        const spacing = unitsOnTop > 1 ? (topBottomAvailable * pixelsPerInch) / (unitsOnTop + 1) : (topBottomAvailable * pixelsPerInch) / 2;
         for (let i = 0; i < unitsOnTop; i++) {
-          const x = cornerBuffer + smallRadius + (i * spacing);
+          const x = cornerOffsetPx + cornerPlantRadiusPx + ((i + 1) * spacing);
           const y = borderMargin + smallRadius;
           placeUnit(x, y, plantsPlaced);
           plantsPlaced++;
         }
       }
       
-      // Right edge - distribute units evenly with proper centering
+      // Right edge - start after top corner, distribute evenly to bottom corner
       if (unitsOnRight > 0) {
-        const availableSpace = leftRightLength - (2 * smallRadius);
-        const spacing = unitsOnRight > 1 ? availableSpace / (unitsOnRight - 1) : 0;
+        const spacing = unitsOnRight > 1 ? (leftRightAvailable * pixelsPerInch) / (unitsOnRight + 1) : (leftRightAvailable * pixelsPerInch) / 2;
         for (let i = 0; i < unitsOnRight; i++) {
           const x = svgWidth - borderMargin - smallRadius;
-          const y = cornerBuffer + smallRadius + (i * spacing);
+          const y = cornerOffsetPx + cornerPlantRadiusPx + ((i + 1) * spacing);
           placeUnit(x, y, plantsPlaced);
           plantsPlaced++;
         }
       }
       
-      // Bottom edge - distribute units evenly with proper centering
+      // Bottom edge - start after right corner, distribute evenly to left corner
       if (unitsOnBottom > 0) {
-        const availableSpace = topBottomLength - (2 * smallRadius);
-        const spacing = unitsOnBottom > 1 ? availableSpace / (unitsOnBottom - 1) : 0;
+        const spacing = unitsOnBottom > 1 ? (topBottomAvailable * pixelsPerInch) / (unitsOnBottom + 1) : (topBottomAvailable * pixelsPerInch) / 2;
         for (let i = 0; i < unitsOnBottom; i++) {
-          const x = svgWidth - cornerBuffer - smallRadius - (i * spacing);
+          const x = svgWidth - cornerOffsetPx - cornerPlantRadiusPx - ((i + 1) * spacing);
           const y = svgHeight - borderMargin - smallRadius;
           placeUnit(x, y, plantsPlaced);
           plantsPlaced++;
         }
       }
       
-      // Left edge - distribute units evenly with proper centering
+      // Left edge - start after bottom corner, distribute evenly to top corner
       if (unitsOnLeft > 0) {
-        const availableSpace = leftRightLength - (2 * smallRadius);
-        const spacing = unitsOnLeft > 1 ? availableSpace / (unitsOnLeft - 1) : 0;
+        const spacing = unitsOnLeft > 1 ? (leftRightAvailable * pixelsPerInch) / (unitsOnLeft + 1) : (leftRightAvailable * pixelsPerInch) / 2;
         for (let i = 0; i < unitsOnLeft; i++) {
           const x = borderMargin + smallRadius;
-          const y = svgHeight - cornerBuffer - smallRadius - (i * spacing);
+          const y = svgHeight - cornerOffsetPx - cornerPlantRadiusPx - ((i + 1) * spacing);
           placeUnit(x, y, plantsPlaced);
           plantsPlaced++;
         }
