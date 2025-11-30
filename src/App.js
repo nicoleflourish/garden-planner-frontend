@@ -531,6 +531,8 @@ const generatePlantColors = (layoutItems) => {
                          smallFlowersHerbs;
     
     let cornersPlaced = 0;
+    let cornerUnitsUsed = 0;  // Track border units used for corners
+    
     if (cornerPlants.length > 0) {
       const plantRadius = cornerPlants[0].spacing * pixelsPerInch;
       const edgeMargin = 15;
@@ -577,6 +579,43 @@ const generatePlantColors = (layoutItems) => {
     
     console.log('Border units:', borderUnits.map(u => ({ name: u.plant.name, isCluster: u.isCluster })));
     
+    // If no traditional corner plants were placed, use border units for corners
+    cornerUnitsUsed = 0;  // Reset (already declared earlier)
+    if (cornersPlaced === 0 && borderUnits.length > 0) {
+      const edgeMargin = 15;
+      const unit = borderUnits[0];
+      // For clusters, center is 3" from edge; for single plants, use actual radius
+      const unitRadius = unit.isCluster ? (unit.plant.spacing * pixelsPerInch * 2) : (unit.plant.spacing * pixelsPerInch);
+      
+      // Helper function to place corner unit
+      const placeCornerUnit = (x, y) => {
+        if (unit.isCluster) {
+          const xsRadius = unit.plant.spacing * pixelsPerInch;
+          const offset = xsRadius * 0.7;
+          layout.push({ plant: unit.plant, x: x - offset, y: y - offset, location: 'corner', cluster: true });
+          layout.push({ plant: unit.plant, x: x + offset, y: y - offset, location: 'corner', cluster: true });
+          layout.push({ plant: unit.plant, x: x - offset, y: y + offset, location: 'corner', cluster: true });
+          layout.push({ plant: unit.plant, x: x + offset, y: y + offset, location: 'corner', cluster: true });
+        } else {
+          layout.push({ plant: unit.plant, x, y, location: 'corner' });
+        }
+      };
+      
+      const corners = [
+        { x: edgeMargin + unitRadius, y: edgeMargin + unitRadius },
+        { x: svgWidth - edgeMargin - unitRadius, y: edgeMargin + unitRadius },
+        { x: edgeMargin + unitRadius, y: svgHeight - edgeMargin - unitRadius },
+        { x: svgWidth - edgeMargin - unitRadius, y: svgHeight - edgeMargin - unitRadius }
+      ];
+      
+      corners.forEach(corner => {
+        placeCornerUnit(corner.x, corner.y);
+        cornerUnitsUsed++;
+      });
+      
+      console.log('Placed border units in corners:', unit.plant.name, 'count:', cornerUnitsUsed, 'isCluster:', unit.isCluster);
+    }
+    
     const borderSmallPlants = borderUnits.length > 0 
       ? borderUnits.map(u => u.plant)
       : mediumPlants.slice(0, 3);
@@ -589,11 +628,11 @@ const generatePlantColors = (layoutItems) => {
       const plantDiameter = borderUnits[0].isCluster ? 6 : (borderUnits[0].plant.spacing * 2);
       const borderMargin = 18;
       
-      // Calculate corner plant size - if no corner plants, use border plant diameter as minimum
-      // This reserves space at corners even when no dedicated corner plants exist
+      // Calculate corner plant size
+      // When placing border units in corners, they occupy space just like any other corner plant
       const cornerPlantDiameter = cornerPlants.length > 0 
         ? cornerPlants[0].spacing * 2 
-        : plantDiameter;  // Use border plant diameter as minimum corner reservation
+        : plantDiameter;  // Border units in corners occupy their diameter
       const cornerPlantRadius = cornerPlantDiameter / 2;
       const cornerPlantRadiusPx = cornerPlantRadius * pixelsPerInch;
       
@@ -635,18 +674,22 @@ const generatePlantColors = (layoutItems) => {
       };
       
       // Calculate how many units go on each edge proportionally
+      // Subtract corner units that were already placed
+      const remainingBorderUnits = borderPlantsToPlace - cornerUnitsUsed;
       const totalEdgeLength = (topBottomAvailable * 2) + (leftRightAvailable * 2);
-      const unitsOnTop = Math.floor(borderPlantsToPlace * (topBottomAvailable / totalEdgeLength));
-      const unitsOnRight = Math.floor(borderPlantsToPlace * (leftRightAvailable / totalEdgeLength));
-      const unitsOnBottom = Math.floor(borderPlantsToPlace * (topBottomAvailable / totalEdgeLength));
-      const unitsOnLeft = borderPlantsToPlace - unitsOnTop - unitsOnRight - unitsOnBottom;
+      const unitsOnTop = Math.floor(remainingBorderUnits * (topBottomAvailable / totalEdgeLength));
+      const unitsOnRight = Math.floor(remainingBorderUnits * (leftRightAvailable / totalEdgeLength));
+      const unitsOnBottom = Math.floor(remainingBorderUnits * (topBottomAvailable / totalEdgeLength));
+      const unitsOnLeft = remainingBorderUnits - unitsOnTop - unitsOnRight - unitsOnBottom;
       
-      console.log('Units per edge:', { unitsOnTop, unitsOnRight, unitsOnBottom, unitsOnLeft, total: borderPlantsToPlace });
+      console.log('Units per edge:', { unitsOnTop, unitsOnRight, unitsOnBottom, unitsOnLeft, cornerUnitsUsed, remainingBorderUnits, total: borderPlantsToPlace });
       
       let plantsPlaced = 0;
+      
+      // Start after corner plants
       const cornerOffsetPx = cornerPlantRadiusPx + edgeMargin;
       
-      // Top edge - start after left corner, distribute evenly to right corner
+      // Top edge
       if (unitsOnTop > 0) {
         const spacing = unitsOnTop > 1 ? (topBottomAvailable * pixelsPerInch) / (unitsOnTop + 1) : (topBottomAvailable * pixelsPerInch) / 2;
         for (let i = 0; i < unitsOnTop; i++) {
@@ -657,7 +700,7 @@ const generatePlantColors = (layoutItems) => {
         }
       }
       
-      // Right edge - start after top corner, distribute evenly to bottom corner
+      // Right edge
       if (unitsOnRight > 0) {
         const spacing = unitsOnRight > 1 ? (leftRightAvailable * pixelsPerInch) / (unitsOnRight + 1) : (leftRightAvailable * pixelsPerInch) / 2;
         for (let i = 0; i < unitsOnRight; i++) {
@@ -668,7 +711,7 @@ const generatePlantColors = (layoutItems) => {
         }
       }
       
-      // Bottom edge - start after right corner, distribute evenly to left corner
+      // Bottom edge
       if (unitsOnBottom > 0) {
         const spacing = unitsOnBottom > 1 ? (topBottomAvailable * pixelsPerInch) / (unitsOnBottom + 1) : (topBottomAvailable * pixelsPerInch) / 2;
         for (let i = 0; i < unitsOnBottom; i++) {
@@ -679,7 +722,7 @@ const generatePlantColors = (layoutItems) => {
         }
       }
       
-      // Left edge - start after bottom corner, distribute evenly to top corner
+      // Left edge
       if (unitsOnLeft > 0) {
         const spacing = unitsOnLeft > 1 ? (leftRightAvailable * pixelsPerInch) / (unitsOnLeft + 1) : (leftRightAvailable * pixelsPerInch) / 2;
         for (let i = 0; i < unitsOnLeft; i++) {
