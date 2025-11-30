@@ -144,10 +144,11 @@ React.useEffect(() => {
     if (plant.tempUpper >= 70) seasons.push('hot');
     return [...new Set(seasons)];
   };
-
-  const processWeatherData = () => {
+// UPDATED: Now accepts data as parameter instead of reading from state
+  const processWeatherData = (weatherDataInput = weatherData) => {
     // Use fetched weather data if available, otherwise use hardcoded Sugarland data
-    const dataToUse = weatherData || sugarlandData;
+    // Use passed-in data, or fall back to state, or fall back to hardcoded
+    const dataToUse = weatherDataInput || weatherData || sugarlandData;
     let seasonData = dataToUse.map(week => ({ ...week, season: getSeason(week.avg) }));
 
     const smoothSeasons = [...seasonData];
@@ -203,8 +204,94 @@ React.useEffect(() => {
       }
     });
 
-    return { seasonData, transitions: plantingWindows };
+     return {
+    seasonData: smoothSeasons,
+    transitions: mergedTransitions,
+    seasonRanges: seasonRanges};
   };
+  // NEW: Version that accepts data as parameters
+  const findPlantingWindowDirect = (targetDateStr, seasonData, transitions) => {
+    const targetDate = new Date(targetDateStr);
+    const targetYear = targetDate.getFullYear();
+    const yearStart = new Date(targetYear, 0, 1);
+    const dayOfYear = Math.floor((targetDate - yearStart) / (1000 * 60 * 60 * 24)) + 1;
+    const targetWeek = Math.ceil(dayOfYear / 7);
+
+    for (const transition of transitions) {
+      if (transition.weeks.some(w => w.week === targetWeek)) {
+        return { plantingWindow: transition, targetWeekData: seasonData[targetWeek - 1], isInWindow: true };
+      }
+    }
+
+    let nextTransition = transitions.find(t => t.windowStart > targetWeek) || transitions[0];
+    return { plantingWindow: nextTransition, targetWeekData: seasonData[targetWeek - 1], isInWindow: false };
+  };
+// NEW: Version that accepts data as parameter
+const processWeatherDataDirect = (weatherDataInput) => {
+  const dataToUse = weatherDataInput || sugarlandData;
+  let seasonData = dataToUse.map(week => ({ ...week, season: getSeason(week.avg) }));
+
+  // Smooth outlier weeks
+  const smoothSeasons = [...seasonData];
+  for (let i = 0; i < seasonData.length; i++) {
+    const prev = seasonData[(i - 1 + seasonData.length) % seasonData.length];
+    const current = seasonData[i];
+    const next = seasonData[(i + 1) % seasonData.length];
+    
+    if (current.season !== prev.season && current.season !== next.season && prev.season === next.season) {
+      const avgNeighborTemp = (prev.avg + next.avg) / 2;
+      if (Math.abs(current.avg - avgNeighborTemp) <= 15) {
+        smoothSeasons[i] = { ...current, season: prev.season };
+      }
+    }
+  }
+  seasonData = smoothSeasons;
+
+  const transitions = [];
+  for (let i = 0; i < seasonData.length; i++) {
+    const current = seasonData[i];
+    const next = seasonData[(i + 1) % seasonData.length];
+    if (current.season !== next.season) {
+      transitions.push({ transitionWeek: i + 1, fromSeason: current.season, toSeason: next.season, weekIndex: i });
+    }
+  }
+
+  const mergedTransitions = [];
+  let i = 0;
+  while (i < transitions.length) {
+    const current = transitions[i];
+    let lastInSequence = current;
+    let j = i + 1;
+    while (j < transitions.length && transitions[j].weekIndex - lastInSequence.weekIndex <= 4) {
+      lastInSequence = transitions[j];
+      j++;
+    }
+    const weeks = [];
+    for (let k = current.weekIndex; k <= lastInSequence.weekIndex; k++) {
+      weeks.push(seasonData[k]);
+    }
+    mergedTransitions.push({
+      fromSeason: current.fromSeason,
+      toSeason: lastInSequence.toSeason,
+      windowStart: current.transitionWeek,
+      windowEnd: lastInSequence.transitionWeek,
+      weeks: weeks
+    });
+    i = j;
+  }
+
+  const seasonRanges = mergedTransitions.map(t => ({
+    season: `${t.fromSeason}-${t.toSeason}`,
+    startWeek: t.windowStart,
+    endWeek: t.windowEnd
+  }));
+
+  return {
+    seasonData: smoothSeasons,
+    transitions: mergedTransitions,
+    seasonRanges: seasonRanges
+  };
+};
 
   const canPlantMatureInWindow = (plant, plantingWindow, seasonData) => {
     const plantSeasons = getPlantSeasons(plant);
@@ -304,24 +391,22 @@ React.useEffect(() => {
       return;
     }
     
-    // Get target year for planting
     const targetYear = new Date(targetDate).getFullYear();
     
-    // Fetch weather data for this zip code if not already loaded
-    // This will use PREVIOUS year's weather (targetYear - 1) to predict current year
+    // FIX: Store the returned data
+    let currentWeatherData = weatherData;
+    
     if (!weatherData) {
       const fetchedData = await fetchWeatherData(zipCode, targetYear);
-      // If fetch failed, processWeatherData will use hardcoded data
+      currentWeatherData = fetchedData; // ✅ Use returned data directly
     }
     
-    const windowResult = findPlantingWindow(targetDate);
-    const { seasonData } = processWeatherData();
+    // FIX: Pass the data directly to processing
+    const { seasonData, transitions } = processWeatherData(currentWeatherData);
+    const windowResult = findPlantingWindowDirect(targetDate, seasonData, transitions);
     const eligiblePlants = getEligiblePlants(windowResult.plantingWindow, seasonData);
     
-    // Calculate planting date range
     const dateRange = getPlantingDateRange(windowResult.plantingWindow, targetYear);
-    
-    // Get season name
     const seasonName = getSeasonName(windowResult.plantingWindow);
     
     setResult({ 
