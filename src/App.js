@@ -471,7 +471,7 @@ const generatePlantColors = (layoutItems) => {
     let cornersPlaced = 0;
     if (cornerPlants.length > 0) {
       const plantRadius = cornerPlants[0].spacing * pixelsPerInch;
-      const edgeMargin = 15;
+      const edgeMargin = 20; // Match SVG padding
       const corners = [
         { x: edgeMargin + plantRadius, y: edgeMargin + plantRadius },
         { x: svgWidth - edgeMargin - plantRadius, y: edgeMargin + plantRadius },
@@ -616,44 +616,49 @@ const generatePlantColors = (layoutItems) => {
         }
       };
       
-      // Top edge - plants should be at y = edgeMargin + unitRadius
-      let currentDistance = startOffset;
-      while (currentDistance < topBottomLength - startOffset + unitRadius && unitsPlaced < maxBorderUnits) {
-        const x = edgeMargin + cornerBuffer + currentDistance;
+      // Distribute units evenly around the perimeter
+      // Calculate how many units go on each edge proportionally
+      const totalEdgeLength = (topBottomLength * 2) + (leftRightLength * 2);
+      const unitsOnTop = Math.floor(maxBorderUnits * (topBottomLength / totalEdgeLength));
+      const unitsOnRight = Math.floor(maxBorderUnits * (leftRightLength / totalEdgeLength));
+      const unitsOnBottom = Math.floor(maxBorderUnits * (topBottomLength / totalEdgeLength));
+      const unitsOnLeft = maxBorderUnits - unitsOnTop - unitsOnRight - unitsOnBottom;
+      
+      console.log('Units per edge:', { unitsOnTop, unitsOnRight, unitsOnBottom, unitsOnLeft });
+      
+      // Reset counter before distributing
+      unitsPlaced = 0;
+      
+      // Top edge
+      for (let i = 0; i < unitsOnTop; i++) {
+        const x = edgeMargin + startOffset + (i * unitPlusGapPx);
         const y = edgeMargin + unitRadius;
         placeUnit(x, y, unitsPlaced);
         unitsPlaced++;
-        currentDistance += unitPlusGapPx;
       }
       
-      // Right edge - plants should be at x = svgWidth - edgeMargin - unitRadius
-      currentDistance = startOffset;
-      while (currentDistance < leftRightLength - startOffset + unitRadius && unitsPlaced < maxBorderUnits) {
+      // Right edge
+      for (let i = 0; i < unitsOnRight; i++) {
         const x = svgWidth - edgeMargin - unitRadius;
-        const y = edgeMargin + cornerBuffer + currentDistance;
+        const y = edgeMargin + startOffset + (i * unitPlusGapPx);
         placeUnit(x, y, unitsPlaced);
         unitsPlaced++;
-        currentDistance += unitPlusGapPx;
       }
       
-      // Bottom edge - plants should be at y = svgHeight - edgeMargin - unitRadius
-      currentDistance = startOffset;
-      while (currentDistance < topBottomLength - startOffset + unitRadius && unitsPlaced < maxBorderUnits) {
-        const x = svgWidth - edgeMargin - cornerBuffer - currentDistance;
+      // Bottom edge (place from right to left)
+      for (let i = 0; i < unitsOnBottom; i++) {
+        const x = svgWidth - edgeMargin - startOffset - (i * unitPlusGapPx);
         const y = svgHeight - edgeMargin - unitRadius;
         placeUnit(x, y, unitsPlaced);
         unitsPlaced++;
-        currentDistance += unitPlusGapPx;
       }
       
-      // Left edge - plants should be at x = edgeMargin + unitRadius
-      currentDistance = startOffset;
-      while (currentDistance < leftRightLength - startOffset + unitRadius && unitsPlaced < maxBorderUnits) {
+      // Left edge (place from bottom to top)
+      for (let i = 0; i < unitsOnLeft; i++) {
         const x = edgeMargin + unitRadius;
-        const y = svgHeight - edgeMargin - cornerBuffer - currentDistance;
+        const y = svgHeight - edgeMargin - startOffset - (i * unitPlusGapPx);
         placeUnit(x, y, unitsPlaced);
         unitsPlaced++;
-        currentDistance += unitPlusGapPx;
       }
       
       console.log('Border units placed:', unitsPlaced);
