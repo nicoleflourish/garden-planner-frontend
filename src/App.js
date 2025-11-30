@@ -584,11 +584,16 @@ const generatePlantColors = (layoutItems) => {
     
     if (borderUnits.length > 0) {
       const smallRadius = borderUnits[0].plant.spacing * pixelsPerInch;
+      
+      // Calculate effective diameter based on whether first unit is a cluster
       const plantDiameter = borderUnits[0].isCluster ? 6 : (borderUnits[0].plant.spacing * 2);
       const borderMargin = 18;
       
-      // Calculate actual corner plant size
-      const cornerPlantDiameter = cornerPlants.length > 0 ? cornerPlants[0].spacing * 2 : 0;
+      // Calculate corner plant size - if no corner plants, use border plant diameter as minimum
+      // This reserves space at corners even when no dedicated corner plants exist
+      const cornerPlantDiameter = cornerPlants.length > 0 
+        ? cornerPlants[0].spacing * 2 
+        : plantDiameter;  // Use border plant diameter as minimum corner reservation
       const cornerPlantRadius = cornerPlantDiameter / 2;
       const cornerPlantRadiusPx = cornerPlantRadius * pixelsPerInch;
       
