@@ -528,21 +528,23 @@ const generatePlantColors = (layoutItems) => {
     
     // Calculate dynamic capacity and distribute units
     if (borderUnits.length > 0) {
-      const borderMargin = 18;
-      const edgeMargin = 15;
+      const edgeMargin = 20; // Margin from SVG edge to bed edge (for border drawing)
       
       // Use 6" as standard unit spacing (works for both S plants and XS clusters)
       const unitSpacing = 6;
       const unitRadius = unitSpacing * pixelsPerInch;
       const unitDiameter = unitSpacing * 2;
       
-      // Calculate corner buffer
+      // Calculate corner plant radius
       const cornerPlantRadius = cornerPlants.length > 0 ? (cornerPlants[0].spacing * pixelsPerInch) : 0;
-      const cornerBuffer = cornerPlants.length > 0 ? cornerPlants[0].spacing * pixelsPerInch * 2.5 : unitRadius * 3;
       
-      // Calculate available perimeter
-      const topBottomLength = (bedLengthInches * pixelsPerInch) - (2 * cornerBuffer);
-      const leftRightLength = (bedWidthInches * pixelsPerInch) - (2 * cornerBuffer);
+      // First pass: estimate cornerBuffer for capacity calculation
+      // Use just radius + one unit radius as buffer
+      const estimatedCornerBuffer = cornerPlants.length > 0 ? (cornerPlantRadius + unitRadius) : unitRadius * 1.5;
+      
+      // Calculate available perimeter with estimated buffer
+      const topBottomLength = (bedLengthInches * pixelsPerInch) - (2 * estimatedCornerBuffer);
+      const leftRightLength = (bedWidthInches * pixelsPerInch) - (2 * estimatedCornerBuffer);
       const totalPerimeterPx = (topBottomLength * 2) + (leftRightLength * 2);
       const totalPerimeterInches = totalPerimeterPx / pixelsPerInch;
       
@@ -564,6 +566,9 @@ const generatePlantColors = (layoutItems) => {
       const gapSpacingInches = totalGapInches / totalUnits;
       const gapSpacingPx = gapSpacingInches * pixelsPerInch;
       
+      // Now calculate actual cornerBuffer with gap spacing
+      const cornerBuffer = cornerPlants.length > 0 ? (cornerPlantRadius + unitRadius + (gapSpacingPx / 2)) : unitRadius * 1.5;
+      
       console.log('Dynamic capacity calculation:', {
         totalPerimeterInches,
         cornerOccupiedInches,
@@ -571,15 +576,16 @@ const generatePlantColors = (layoutItems) => {
         unitDiameter,
         maxBorderUnits,
         totalUnits,
-        gapSpacingInches
+        gapSpacingInches,
+        cornerBuffer: cornerBuffer / pixelsPerInch + ' inches'
       });
       
       // Calculate spacing between units (unit diameter + gap)
       const unitPlusGapInches = unitDiameter + gapSpacingInches;
       const unitPlusGapPx = unitPlusGapInches * pixelsPerInch;
       
-      // Start offset from corners
-      const startOffset = cornerPlantRadius + gapSpacingPx + unitRadius;
+      // Start offset from corner edge (where first border plant should be)
+      const startOffset = cornerPlantRadius + (gapSpacingPx / 2) + unitRadius;
       
       console.log('Unit distribution plan:', {
         unitDiameter,
@@ -590,7 +596,6 @@ const generatePlantColors = (layoutItems) => {
       
       // Distribute units around perimeter
       let unitsPlaced = 0;
-      let currentDistance = startOffset;
       
       // Helper function to place a unit (either single plant or cluster)
       const placeUnit = (x, y, unitIndex) => {
@@ -611,41 +616,41 @@ const generatePlantColors = (layoutItems) => {
         }
       };
       
-      // Top edge
-      currentDistance = startOffset;
-      while (currentDistance + unitRadius < topBottomLength - startOffset + unitRadius && unitsPlaced < maxBorderUnits) {
-        const x = cornerBuffer + currentDistance;
-        const y = borderMargin + unitRadius;
+      // Top edge - plants should be at y = edgeMargin + unitRadius
+      let currentDistance = startOffset;
+      while (currentDistance < topBottomLength - startOffset + unitRadius && unitsPlaced < maxBorderUnits) {
+        const x = edgeMargin + cornerBuffer + currentDistance;
+        const y = edgeMargin + unitRadius;
         placeUnit(x, y, unitsPlaced);
         unitsPlaced++;
         currentDistance += unitPlusGapPx;
       }
       
-      // Right edge
+      // Right edge - plants should be at x = svgWidth - edgeMargin - unitRadius
       currentDistance = startOffset;
-      while (currentDistance + unitRadius < leftRightLength - startOffset + unitRadius && unitsPlaced < maxBorderUnits) {
-        const x = svgWidth - borderMargin - unitRadius;
-        const y = cornerBuffer + currentDistance;
+      while (currentDistance < leftRightLength - startOffset + unitRadius && unitsPlaced < maxBorderUnits) {
+        const x = svgWidth - edgeMargin - unitRadius;
+        const y = edgeMargin + cornerBuffer + currentDistance;
         placeUnit(x, y, unitsPlaced);
         unitsPlaced++;
         currentDistance += unitPlusGapPx;
       }
       
-      // Bottom edge
+      // Bottom edge - plants should be at y = svgHeight - edgeMargin - unitRadius
       currentDistance = startOffset;
-      while (currentDistance + unitRadius < topBottomLength - startOffset + unitRadius && unitsPlaced < maxBorderUnits) {
-        const x = svgWidth - cornerBuffer - currentDistance;
-        const y = svgHeight - borderMargin - unitRadius;
+      while (currentDistance < topBottomLength - startOffset + unitRadius && unitsPlaced < maxBorderUnits) {
+        const x = svgWidth - edgeMargin - cornerBuffer - currentDistance;
+        const y = svgHeight - edgeMargin - unitRadius;
         placeUnit(x, y, unitsPlaced);
         unitsPlaced++;
         currentDistance += unitPlusGapPx;
       }
       
-      // Left edge
+      // Left edge - plants should be at x = edgeMargin + unitRadius
       currentDistance = startOffset;
-      while (currentDistance + unitRadius < leftRightLength - startOffset + unitRadius && unitsPlaced < maxBorderUnits) {
-        const x = borderMargin + unitRadius;
-        const y = svgHeight - cornerBuffer - currentDistance;
+      while (currentDistance < leftRightLength - startOffset + unitRadius && unitsPlaced < maxBorderUnits) {
+        const x = edgeMargin + unitRadius;
+        const y = svgHeight - edgeMargin - cornerBuffer - currentDistance;
         placeUnit(x, y, unitsPlaced);
         unitsPlaced++;
         currentDistance += unitPlusGapPx;
