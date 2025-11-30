@@ -333,63 +333,6 @@ React.useEffect(() => {
     });
   };
 
-  const calculateCapacity = () => {
-    const perimeter = (bedLength * 2) + (bedWidth * 2);
-    
-    return {
-      maxHerbs: perimeter - 4,
-      maxFlowers: perimeter - 6,
-      minLarge: (bedLength - 2) * 2,
-      minMedium: (bedLength - 2) * 4,
-      minSmallXS: (bedLength - 2) * 8
-    };
-  };
-
-  const analyzeSelection = () => {
-    const selectedPlantObjects = selectedPlants.map(name => 
-      plantDatabase.find(p => p.name === name)
-    ).filter(Boolean);
-
-    const herbs = selectedPlantObjects.filter(p => p.category === 'Herb').length;
-    const flowers = selectedPlantObjects.filter(p => p.category === 'Flower').length;
-    const largeVeggies = selectedPlantObjects.filter(p => p.category === 'Vegetable' && (p.size === 'L' || p.size === 'XL')).length;
-    const mediumVeggies = selectedPlantObjects.filter(p => p.category === 'Vegetable' && p.size === 'M').length;
-    const smallXSVeggies = selectedPlantObjects.filter(p => p.category === 'Vegetable' && (p.size === 'S' || p.size === 'XS')).length;
-
-    const capacity = calculateCapacity();
-    const warnings = [];
-    const suggestions = [];
-
-    if (herbs > capacity.maxHerbs) {
-      warnings.push(`Too many herbs! Maximum: ${capacity.maxHerbs}, Selected: ${herbs}`);
-    }
-    if (flowers > capacity.maxFlowers) {
-      warnings.push(`Too many flowers! Maximum: ${capacity.maxFlowers}, Selected: ${flowers}`);
-    }
-    if (largeVeggies < capacity.minLarge) {
-      suggestions.push(`Consider adding ${capacity.minLarge - largeVeggies} more large vegetables to fill the center`);
-    }
-    if (mediumVeggies < capacity.minMedium) {
-      suggestions.push(`You have room for ${capacity.minMedium - mediumVeggies} more medium vegetables`);
-    }
-    if (smallXSVeggies < capacity.minSmallXS) {
-      suggestions.push(`You have room for ${capacity.minSmallXS - smallXSVeggies} more small vegetables`);
-    }
-
-    return { 
-      warnings, 
-      suggestions, 
-      capacity, 
-      counts: { 
-        herbs, 
-        flowers, 
-        large: largeVeggies, 
-        medium: mediumVeggies, 
-        smallXS: smallXSVeggies 
-      } 
-    };
-  };
-
   const handleGenerateLayout = () => {
     if (selectedPlants.length === 0) {
       alert('Please select some plants first!');
@@ -510,11 +453,6 @@ const generatePlantColors = (layoutItems) => {
       }
     }
   
-    // Calculate capacity limits FIRST
-    const perimeter = (bedLength * 2) + (bedWidth * 2);
-    const maxHerbs = perimeter - 4;
-    const maxFlowers = perimeter - 6;
-  
     // After center plants placed
     console.log('After center placement:', {
       layoutLength: layout.length,
@@ -541,17 +479,11 @@ const generatePlantColors = (layoutItems) => {
         { x: svgWidth - edgeMargin - plantRadius, y: svgHeight - edgeMargin - plantRadius }
       ];
       
-      // Check if corner plants are herbs or flowers and respect limits
-      const isHerb = cornerPlants[0].category === 'Herb';
-      const isFlower = cornerPlants[0].category === 'Flower';
-      const cornerLimit = isHerb ? maxHerbs : isFlower ? maxFlowers : Infinity;
-      
+      // Place in all 4 corners
       corners.forEach((corner, i) => {
-        if (cornersPlaced < Math.min(4, cornerLimit)) {
-          const plant = cornerPlants[i % cornerPlants.length];
-          layout.push({ plant, x: corner.x, y: corner.y, location: 'corner' });
-          cornersPlaced++;
-        }
+        const plant = cornerPlants[i % cornerPlants.length];
+        layout.push({ plant, x: corner.x, y: corner.y, location: 'corner' });
+        cornersPlaced++;
       });
       
       console.log('Placed in corners:', cornerPlants[0].name, 'count:', cornersPlaced);
@@ -561,340 +493,171 @@ const generatePlantColors = (layoutItems) => {
         cornerPlants: layout.filter(l => l.location === 'corner').length
       });
     
-    // STEP 3: Place BORDER plants (small plants)
-    console.log('Border plants available:', smallPlants.map(p => p.name));
-      // STEP 3: Place BORDER - Reserve gaps next to corners, distribute remaining plants
-    const borderSmallPlants = smallPlants.length > 0 
-  ? smallPlants 
-  : mediumPlants.slice(0, 3); // Use first 3 medium plants if no small ones
-    const allBorderPositions = []; // Track all border positions
-    let totalGapInches = 0;
-    let totalPlants = 0;
+    // STEP 3 & 4: Create border units (S plants + XS clusters) and distribute dynamically
+    console.log('Border plants available:', smallPlants.map(p => p.name), 'XS plants:', xsPlants.map(p => p.name));
     
-    if (borderSmallPlants.length > 0) {
-      const smallRadius = borderSmallPlants[0].spacing * pixelsPerInch;
-      const plantDiameter = borderSmallPlants[0].spacing * 2; // Occupied space per plant (in inches)
+    // Build array of border units
+    const borderUnits = [];
+    
+    // Add S herbs and flowers as single-plant units
+    smallPlants.forEach(plant => {
+      borderUnits.push({
+        plant: plant,
+        isCluster: false,
+        spacing: plant.spacing, // Use actual plant spacing
+        category: plant.category
+      });
+    });
+    
+    // Add XS vegetables as cluster units (treat as 6" spacing like S plants)
+    const xsVeggies = xsPlants.filter(p => p.category === 'Vegetable');
+    xsVeggies.forEach(plant => {
+      borderUnits.push({
+        plant: plant,
+        isCluster: true,
+        spacing: 6, // Treat cluster as equivalent to 6" S plant
+        category: plant.category
+      });
+    });
+    
+    console.log('Border units created:', borderUnits.map(u => ({
+      name: u.plant.name,
+      isCluster: u.isCluster,
+      spacing: u.spacing
+    })));
+    
+    // Calculate dynamic capacity and distribute units
+    if (borderUnits.length > 0) {
       const borderMargin = 18;
-      const cornerBuffer = cornerPlants.length > 0 ? cornerPlants[0].spacing * pixelsPerInch * 2.5 : smallRadius * 3;
+      const edgeMargin = 15;
       
-      // Calculate perimeter length available for border plants
+      // Use 6" as standard unit spacing (works for both S plants and XS clusters)
+      const unitSpacing = 6;
+      const unitRadius = unitSpacing * pixelsPerInch;
+      const unitDiameter = unitSpacing * 2;
+      
+      // Calculate corner buffer
+      const cornerPlantRadius = cornerPlants.length > 0 ? (cornerPlants[0].spacing * pixelsPerInch) : 0;
+      const cornerBuffer = cornerPlants.length > 0 ? cornerPlants[0].spacing * pixelsPerInch * 2.5 : unitRadius * 3;
+      
+      // Calculate available perimeter
       const topBottomLength = (bedLengthInches * pixelsPerInch) - (2 * cornerBuffer);
       const leftRightLength = (bedWidthInches * pixelsPerInch) - (2 * cornerBuffer);
       const totalPerimeterPx = (topBottomLength * 2) + (leftRightLength * 2);
       const totalPerimeterInches = totalPerimeterPx / pixelsPerInch;
       
-      // Calculate corner occupied space
+      // Calculate how many units fit
+      // Account for corner plant space
       const cornerPlantDiameter = cornerPlants.length > 0 ? cornerPlants[0].spacing * 2 : 0;
       const cornerOccupiedInches = cornersPlaced * cornerPlantDiameter;
       
-      // Calculate limits
-      const isHerb = borderSmallPlants[0].category === 'Herb';
-      const isFlower = borderSmallPlants[0].category === 'Flower';
-      const limit = isHerb ? maxHerbs : isFlower ? maxFlowers : Infinity;
-      const borderPlantsToPlace = limit - cornersPlaced;
+      // Total units = corners + border units
+      // We want to find how many border units can fit
+      // Formula: (totalPerimeter - cornerOccupied) / unitDiameter = max border units
+      const availablePerimeter = totalPerimeterInches - cornerOccupiedInches;
+      const maxBorderUnits = Math.floor(availablePerimeter / unitDiameter);
       
-      // Total plants = corners + border
-      totalPlants = cornersPlaced + borderPlantsToPlace;
-      
-      // Calculate gap spacing
-      const borderOccupiedInches = borderPlantsToPlace * plantDiameter;
-      const totalOccupiedInches = cornerOccupiedInches + borderOccupiedInches;
-      totalGapInches = totalPerimeterInches - totalOccupiedInches;
-      const gapSpacingInches = totalGapInches / totalPlants;
+      // Calculate even gap spacing
+      const totalUnits = cornersPlaced + maxBorderUnits;
+      const totalOccupiedInches = (cornersPlaced * cornerPlantDiameter) + (maxBorderUnits * unitDiameter);
+      const totalGapInches = totalPerimeterInches - totalOccupiedInches;
+      const gapSpacingInches = totalGapInches / totalUnits;
       const gapSpacingPx = gapSpacingInches * pixelsPerInch;
       
-      console.log('Border distribution plan:', {
+      console.log('Dynamic capacity calculation:', {
         totalPerimeterInches,
-        plantDiameter,
-        cornerPlantDiameter,
-        cornersPlaced,
-        borderPlantsToPlace,
-        totalPlants,
+        cornerOccupiedInches,
+        availablePerimeter,
+        unitDiameter,
+        maxBorderUnits,
+        totalUnits,
+        gapSpacingInches
+      });
+      
+      // Calculate spacing between units (unit diameter + gap)
+      const unitPlusGapInches = unitDiameter + gapSpacingInches;
+      const unitPlusGapPx = unitPlusGapInches * pixelsPerInch;
+      
+      // Start offset from corners
+      const startOffset = cornerPlantRadius + gapSpacingPx + unitRadius;
+      
+      console.log('Unit distribution plan:', {
+        unitDiameter,
         gapSpacingInches,
-        totalOccupiedInches,
-        totalGapInches
+        unitPlusGapInches,
+        startOffset: startOffset / pixelsPerInch + ' inches'
       });
       
-      // STRATEGY: Reserve gap space adjacent to each corner (8 gaps for 4 corners)
-      // Then distribute remaining plants in the available space between reserved gaps
-      
-      // Each corner has 2 adjacent gaps (one on each side)
-      const reservedGapsPerCorner = 2;
-      const totalReservedGaps = cornersPlaced * reservedGapsPerCorner; // 8 gaps
-      const reservedGapInches = totalReservedGaps * gapSpacingInches;
-      
-      // Available space for distributing plants = perimeter - corners - reserved gaps
-      const availableForDistribution = totalPerimeterInches - cornerOccupiedInches - reservedGapInches;
-      
-      // Calculate how many plants fit on each edge
-      // Each plant needs: plantDiameter + gap
-      const plantPlusGapInches = plantDiameter + gapSpacingInches;
-      const plantPlusGapPx = plantPlusGapInches * pixelsPerInch;
-      
-      console.log('Distribution with reserved gaps:', {
-        reservedGapsPerCorner,
-        totalReservedGaps,
-        reservedGapInches,
-        availableForDistribution,
-        plantDiameter,
-        gapSpacingInches,
-        plantPlusGapInches
-      });
-      
-      // Start position: from edge of corner plant (radius) + reserved gap
-      // Corner is at edgeMargin + cornerRadius from the actual corner
-      // So first plant should be at: edgeMargin + cornerRadius + gap
-      const cornerPlantRadius = cornerPlants.length > 0 ? (cornerPlants[0].spacing * pixelsPerInch) : 0;
-      const edgeMargin = 15; // From corner placement
-      
-      // Distance from corner edge where plants can start
-      // = corner plant radius + gap + small plant radius
-      const startOffset = cornerPlantRadius + gapSpacingPx + smallRadius;
-      
-      console.log('Start offset calculation:', {
-        cornerPlantRadius,
-        gapSpacingPx,
-        smallRadius,
-        startOffset,
-        startOffsetInches: startOffset / pixelsPerInch
-      });
-      
-      // Distribute plants around perimeter, starting after each corner's reserved gap
+      // Distribute units around perimeter
+      let unitsPlaced = 0;
       let currentDistance = startOffset;
-      let plantsPlaced = 0;
       
-      // Top edge (between top-left and top-right corners)
-      while (currentDistance + smallRadius < topBottomLength - startOffset + smallRadius && plantsPlaced < borderPlantsToPlace) {
-        const x = cornerBuffer + currentDistance;
-        const y = borderMargin + smallRadius;
-        const plant = borderSmallPlants[plantsPlaced % borderSmallPlants.length];
-        layout.push({ plant, x, y, location: 'perimeter' });
-        allBorderPositions.push({ x, y, hasPlant: true });
-        plantsPlaced++;
-        currentDistance += plantPlusGapPx;
-      }
-      
-      // Right edge (between top-right and bottom-right corners)
-      currentDistance = startOffset;
-      while (currentDistance + smallRadius < leftRightLength - startOffset + smallRadius && plantsPlaced < borderPlantsToPlace) {
-        const x = svgWidth - borderMargin - smallRadius;
-        const y = cornerBuffer + currentDistance;
-        const plant = borderSmallPlants[plantsPlaced % borderSmallPlants.length];
-        layout.push({ plant, x, y, location: 'perimeter' });
-        allBorderPositions.push({ x, y, hasPlant: true });
-        plantsPlaced++;
-        currentDistance += plantPlusGapPx;
-      }
-      
-      // Bottom edge (between bottom-right and bottom-left corners)
-      currentDistance = startOffset;
-      while (currentDistance + smallRadius < topBottomLength - startOffset + smallRadius && plantsPlaced < borderPlantsToPlace) {
-        const x = svgWidth - cornerBuffer - currentDistance;
-        const y = svgHeight - borderMargin - smallRadius;
-        const plant = borderSmallPlants[plantsPlaced % borderSmallPlants.length];
-        layout.push({ plant, x, y, location: 'perimeter' });
-        allBorderPositions.push({ x, y, hasPlant: true });
-        plantsPlaced++;
-        currentDistance += plantPlusGapPx;
-      }
-      
-      // Left edge (between bottom-left and top-left corners)
-      currentDistance = startOffset;
-      while (currentDistance + smallRadius < leftRightLength - startOffset + smallRadius && plantsPlaced < borderPlantsToPlace) {
-        const x = borderMargin + smallRadius;
-        const y = svgHeight - cornerBuffer - currentDistance;
-        const plant = borderSmallPlants[plantsPlaced % borderSmallPlants.length];
-        layout.push({ plant, x, y, location: 'perimeter' });
-        allBorderPositions.push({ x, y, hasPlant: true });
-        plantsPlaced++;
-        currentDistance += plantPlusGapPx;
-      }
-      
-      console.log('Border plants placed:', plantsPlaced);
-    }
-      console.log('After border placement:', {
-        layoutLength: layout.length,
-        borderPlants: layout.filter(l => l.location === 'perimeter').length
-      });
-
-    // STEP 4: Place XS plants in clusters
-    console.log('XS plants available:', xsPlants.map(p => p.name));
-
-    // STEP 4: Fill ALL available space with XS veggie clusters
-    const xsVeggies = xsPlants.filter(p => p.category === 'Vegetable');
-    if (xsVeggies.length > 0) {
-      const xsRadius = xsVeggies[0].spacing * pixelsPerInch;
-      const xsClusterDiameter = xsVeggies[0].spacing * 2 * 2; // 2x2 cluster diameter in inches
-      const xsClusterDiameterPx = xsClusterDiameter * pixelsPerInch;
-      
-      console.log('XS cluster requirements:', {
-        xsClusterDiameter,
-        xsClusterDiameterPx,
-        xsClusterDiameterInches: xsClusterDiameter
-      });
-      
-      // Strategy: Measure each edge segment between ALL plants (corners + border)
-      // and fit as many clusters as possible in each segment
-      
-      const edgeMargin = 18;
-      const gaps = [];
-      
-      // Collect ALL plants on perimeter (corners + border) with their positions
-      const allPerimeterPlants = [];
-      
-      // Add corners
-      if (cornersPlaced === 4 && cornerPlants.length > 0) {
-        const cornerRadius = cornerPlants[0].spacing * pixelsPerInch;
-        allPerimeterPlants.push({ x: edgeMargin + cornerRadius, y: edgeMargin + cornerRadius, radius: cornerRadius, edge: 'TL' });
-        allPerimeterPlants.push({ x: svgWidth - edgeMargin - cornerRadius, y: edgeMargin + cornerRadius, radius: cornerRadius, edge: 'TR' });
-        allPerimeterPlants.push({ x: svgWidth - edgeMargin - cornerRadius, y: svgHeight - edgeMargin - cornerRadius, radius: cornerRadius, edge: 'BR' });
-        allPerimeterPlants.push({ x: edgeMargin + cornerRadius, y: svgHeight - edgeMargin - cornerRadius, radius: cornerRadius, edge: 'BL' });
-      }
-      
-      // Add border plants
-      const smallRadius = borderSmallPlants.length > 0 ? borderSmallPlants[0].spacing * pixelsPerInch : 12;
-      allBorderPositions.forEach(pos => {
-        allPerimeterPlants.push({ x: pos.x, y: pos.y, radius: smallRadius });
-      });
-      
-      // Separate plants by edge
-      const topEdgePlants = allPerimeterPlants.filter(p => Math.abs(p.y - (edgeMargin + smallRadius)) < 15).sort((a, b) => a.x - b.x);
-      const rightEdgePlants = allPerimeterPlants.filter(p => Math.abs(p.x - (svgWidth - edgeMargin - smallRadius)) < 15).sort((a, b) => a.y - b.y);
-      const bottomEdgePlants = allPerimeterPlants.filter(p => Math.abs(p.y - (svgHeight - edgeMargin - smallRadius)) < 15).sort((a, b) => a.x - b.x);
-      const leftEdgePlants = allPerimeterPlants.filter(p => Math.abs(p.x - (edgeMargin + smallRadius)) < 15).sort((a, b) => a.y - b.y);
-      
-      console.log('Plants per edge:', {
-        top: topEdgePlants.length,
-        right: rightEdgePlants.length,
-        bottom: bottomEdgePlants.length,
-        left: leftEdgePlants.length
-      });
-      
-      // Helper function to fill edge segment with clusters
-      const fillEdgeWithClusters = (plants, isHorizontal) => {
-        for (let i = 0; i < plants.length - 1; i++) {
-          const plant1 = plants[i];
-          const plant2 = plants[i + 1];
+      // Helper function to place a unit (either single plant or cluster)
+      const placeUnit = (x, y, unitIndex) => {
+        const unit = borderUnits[unitIndex % borderUnits.length];
+        
+        if (unit.isCluster) {
+          // Place 4-plant cluster in 2x2 formation
+          const xsRadius = unit.plant.spacing * pixelsPerInch;
+          const offset = xsRadius * 0.7;
           
-          // Calculate edge-to-edge gap
-          let distance, edgeToEdgeGap;
-          if (isHorizontal) {
-            distance = plant2.x - plant1.x;
-            edgeToEdgeGap = distance - plant1.radius - plant2.radius;
-          } else {
-            distance = plant2.y - plant1.y;
-            edgeToEdgeGap = distance - plant1.radius - plant2.radius;
-          }
-          
-          // How many clusters fit?
-          const numClusters = Math.floor(edgeToEdgeGap / xsClusterDiameterPx);
-          
-          if (numClusters >= 1) {
-            // Distribute clusters evenly in the gap
-            const clusterSpacing = edgeToEdgeGap / numClusters;
-            const startPos = isHorizontal ? plant1.x + plant1.radius : plant1.y + plant1.radius;
-            
-            for (let c = 0; c < numClusters; c++) {
-              const offset = (c * clusterSpacing) + (clusterSpacing / 2);
-              if (isHorizontal) {
-                const x = startPos + offset;
-                const y = plant1.y; // Same y as the edge plants
-                gaps.push({ x, y, numClusters, gapInches: edgeToEdgeGap / pixelsPerInch });
-              } else {
-                const x = plant1.x; // Same x as the edge plants
-                const y = startPos + offset;
-                gaps.push({ x, y, numClusters, gapInches: edgeToEdgeGap / pixelsPerInch });
-              }
-            }
-          }
+          layout.push({ plant: unit.plant, x: x - offset, y: y - offset, location: 'perimeter', cluster: true });
+          layout.push({ plant: unit.plant, x: x + offset, y: y - offset, location: 'perimeter', cluster: true });
+          layout.push({ plant: unit.plant, x: x - offset, y: y + offset, location: 'perimeter', cluster: true });
+          layout.push({ plant: unit.plant, x: x + offset, y: y + offset, location: 'perimeter', cluster: true });
+        } else {
+          // Place single plant
+          layout.push({ plant: unit.plant, x, y, location: 'perimeter' });
         }
       };
       
-      // Fill each edge
-      fillEdgeWithClusters(topEdgePlants, true);
-      fillEdgeWithClusters(rightEdgePlants, false);
-      fillEdgeWithClusters(bottomEdgePlants, true);
-      fillEdgeWithClusters(leftEdgePlants, false);
-      
-      console.log('Total XS cluster positions found:', gaps.length, gaps.map(g => ({
-        gapInches: g.gapInches.toFixed(1),
-        clustersInGap: g.numClusters
-      })));
-      
-      // Place XS clusters in gaps
-      gaps.forEach(gap => {
-        const plant = xsVeggies[0];
-        const offset = xsRadius * 0.7;
-        
-        layout.push({ plant, x: gap.x - offset, y: gap.y - offset, location: 'perimeter', cluster: true });
-        layout.push({ plant, x: gap.x + offset, y: gap.y - offset, location: 'perimeter', cluster: true });
-        layout.push({ plant, x: gap.x - offset, y: gap.y + offset, location: 'perimeter', cluster: true });
-        layout.push({ plant, x: gap.x + offset, y: gap.y + offset, location: 'perimeter', cluster: true });
-      });
-      
-      console.log('XS clusters placed:', gaps.length);
-      // Fallback: If no gaps found, place XS clusters around entire perimeter
-      if (gaps.length === 0 && xsVeggies.length > 0) {
-        console.log('No gaps found - using fallback perimeter placement');
-        
-        const perimeterLengthPx = (bedLengthInches * 2 + bedWidthInches * 2) * pixelsPerInch;
-        const maxClusters = Math.floor(perimeterLengthPx / xsClusterDiameterPx);
-        const clusterSpacing = perimeterLengthPx / maxClusters;
-        
-        for (let i = 0; i < maxClusters; i++) {
-          const distanceAlongPerimeter = i * clusterSpacing + (clusterSpacing / 2);
-          let x, y;
-          
-          const topLength = bedLengthInches * pixelsPerInch;
-          const rightLength = bedWidthInches * pixelsPerInch;
-          const bottomLength = bedLengthInches * pixelsPerInch;
-          
-          // Calculate position along perimeter
-          if (distanceAlongPerimeter < topLength) {
-            // Top edge
-            x = edgeMargin + distanceAlongPerimeter;
-            y = edgeMargin + xsRadius * 2;
-          } else if (distanceAlongPerimeter < topLength + rightLength) {
-            // Right edge
-            x = svgWidth - edgeMargin - xsRadius * 2;
-            y = edgeMargin + (distanceAlongPerimeter - topLength);
-          } else if (distanceAlongPerimeter < topLength + rightLength + bottomLength) {
-            // Bottom edge
-            x = svgWidth - edgeMargin - (distanceAlongPerimeter - topLength - rightLength);
-            y = svgHeight - edgeMargin - xsRadius * 2;
-          } else {
-            // Left edge
-            x = edgeMargin + xsRadius * 2;
-            y = svgHeight - edgeMargin - (distanceAlongPerimeter - topLength - rightLength - bottomLength);
-          }
-          
-          // Check for overlap with center plants
-          const hasOverlap = layout.some(item => {
-            const dx = item.x - x;
-            const dy = item.y - y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            const minDistance = (item.plant.spacing * pixelsPerInch) + (xsRadius * 2);
-            return distance < minDistance;
-          });
-          
-          if (!hasOverlap) {
-            // Place 2x2 cluster
-            const plant = xsVeggies[0];
-            const offset = xsRadius * 0.7;
-            layout.push({ plant, x: x - offset, y: y - offset, location: 'perimeter', cluster: true });
-            layout.push({ plant, x: x + offset, y: y - offset, location: 'perimeter', cluster: true });
-            layout.push({ plant, x: x - offset, y: y + offset, location: 'perimeter', cluster: true });
-            layout.push({ plant, x: x + offset, y: y + offset, location: 'perimeter', cluster: true });
-          }
-        }
-        
-        console.log('Fallback XS clusters placed around perimeter');
+      // Top edge
+      currentDistance = startOffset;
+      while (currentDistance + unitRadius < topBottomLength - startOffset + unitRadius && unitsPlaced < maxBorderUnits) {
+        const x = cornerBuffer + currentDistance;
+        const y = borderMargin + unitRadius;
+        placeUnit(x, y, unitsPlaced);
+        unitsPlaced++;
+        currentDistance += unitPlusGapPx;
       }
+      
+      // Right edge
+      currentDistance = startOffset;
+      while (currentDistance + unitRadius < leftRightLength - startOffset + unitRadius && unitsPlaced < maxBorderUnits) {
+        const x = svgWidth - borderMargin - unitRadius;
+        const y = cornerBuffer + currentDistance;
+        placeUnit(x, y, unitsPlaced);
+        unitsPlaced++;
+        currentDistance += unitPlusGapPx;
+      }
+      
+      // Bottom edge
+      currentDistance = startOffset;
+      while (currentDistance + unitRadius < topBottomLength - startOffset + unitRadius && unitsPlaced < maxBorderUnits) {
+        const x = svgWidth - cornerBuffer - currentDistance;
+        const y = svgHeight - borderMargin - unitRadius;
+        placeUnit(x, y, unitsPlaced);
+        unitsPlaced++;
+        currentDistance += unitPlusGapPx;
+      }
+      
+      // Left edge
+      currentDistance = startOffset;
+      while (currentDistance + unitRadius < leftRightLength - startOffset + unitRadius && unitsPlaced < maxBorderUnits) {
+        const x = borderMargin + unitRadius;
+        const y = svgHeight - cornerBuffer - currentDistance;
+        placeUnit(x, y, unitsPlaced);
+        unitsPlaced++;
+        currentDistance += unitPlusGapPx;
+      }
+      
+      console.log('Border units placed:', unitsPlaced);
     }
-      console.log('After XS placement:', {
-        layoutLength: layout.length,
-        xsPlants: layout.filter(l => l.location === 'inner-ring').length
-      });
+    
+    console.log('After border/XS placement:', {
+      layoutLength: layout.length,
+      borderPlants: layout.filter(l => l.location === 'perimeter').length
+    });
     // STEP 5: Place MEDIUM vegetables with overlap tolerance (6 sq inches max)
     const mediumVeggies = mediumPlants.filter(p => p.category === 'Vegetable');
     if (mediumVeggies.length > 0) {
@@ -1195,67 +958,6 @@ const generatePlantColors = (layoutItems) => {
       {selectedPlants.length > 0 && (
         <div className="bg-white rounded-lg shadow-lg p-8 mb-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">Garden Layout</h2>
-          
-          {(() => {
-            const analysis = analyzeSelection();
-            return (
-              <>
-                {analysis.warnings.length > 0 && (
-                  <div className="mb-4 bg-yellow-50 border-l-4 border-yellow-400 p-4">
-                    <h3 className="font-semibold text-yellow-800 mb-2">⚠️ Warnings</h3>
-                    <ul className="list-disc list-inside text-yellow-700 text-sm">
-                      {analysis.warnings.map((w, i) => <li key={i}>{w}</li>)}
-                    </ul>
-                  </div>
-                )}
-                
-                {analysis.suggestions.length > 0 && (
-                  <div className="mb-4 bg-blue-50 border-l-4 border-blue-400 p-4">
-                    <h3 className="font-semibold text-blue-800 mb-2">💡 Suggestions</h3>
-                    <ul className="list-disc list-inside text-blue-700 text-sm">
-                      {analysis.suggestions.map((s, i) => <li key={i}>{s}</li>)}
-                    </ul>
-                  </div>
-                )}
-
-                <div className="mb-4 bg-gray-50 rounded-lg p-4">
-                  <h3 className="font-semibold text-gray-800 mb-2">Bed Capacity for {bedLength}' x {bedWidth}'</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
-                    <div>
-                      <span className="text-gray-600">Herbs:</span>
-                      <span className={`ml-2 font-semibold ${analysis.counts.herbs > analysis.capacity.maxHerbs ? 'text-red-600' : 'text-green-600'}`}>
-                        {analysis.counts.herbs} / {analysis.capacity.maxHerbs}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Flowers:</span>
-                      <span className={`ml-2 font-semibold ${analysis.counts.flowers > analysis.capacity.maxFlowers ? 'text-red-600' : 'text-green-600'}`}>
-                        {analysis.counts.flowers} / {analysis.capacity.maxFlowers}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Large Veggies:</span>
-                      <span className="ml-2 font-semibold text-gray-700">
-                        {analysis.counts.large} (min: {analysis.capacity.minLarge})
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Medium Veggies:</span>
-                      <span className="ml-2 font-semibold text-gray-700">
-                        {analysis.counts.medium} (min: {analysis.capacity.minMedium})
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Small Veggies:</span>
-                      <span className="ml-2 font-semibold text-gray-700">
-                        {analysis.counts.smallXS} (min: {analysis.capacity.minSmallXS})
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </>
-            );
-          })()}
           
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
