@@ -494,7 +494,7 @@ const generatePlantColors = (layoutItems) => {
     let centerRadius = 0;
     
     if (centerPlants.length > 0) {
-      const plantSpacingInches = centerPlants[0].spacing;
+      const plantSpacingInches = Math.max(...centerPlants.map(p => p.spacing));
       centerRadius = plantSpacingInches * pixelsPerInch;
       const plantSpacing = plantSpacingInches * 2 * pixelsPerInch;
       
