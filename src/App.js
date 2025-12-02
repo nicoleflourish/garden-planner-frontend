@@ -953,7 +953,7 @@ const generatePlantColors = (layoutItems) => {
       
       // Place medium vegetables, alternating between types
       // LIMIT: Place max of 8 medium veggies for cleaner layouts
-      const maxMediumVeggies = 8;
+      const maxMediumVeggies = 20;
       let plantIndex = 0;
       preferredPositions.forEach((pos) => {
         if (plantIndex < maxMediumVeggies) {
