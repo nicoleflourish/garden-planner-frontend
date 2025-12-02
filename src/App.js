@@ -147,8 +147,11 @@ React.useEffect(() => {
 // UPDATED: Now accepts data as parameter instead of reading from state
 const processWeatherData = (weatherDataInput = weatherData) => {
   // Use passed-in data, or fall back to state, or fall back to hardcoded
-  const dataToUse = weatherDataInput || weatherData || sugarlandData;
-  let seasonData = dataToUse.map(week => ({ ...week, season: getSeason(week.avg) }));
+  if (weatherDataInput?.processed) {
+    return weatherDataInput.processed;
+  }
+   const dataToUse = weatherDataInput?.weeklyData || weatherDataInput || weatherData || sugarlandData;  
+   let seasonData = dataToUse.map(week => ({ ...week, season: getSeason(week.avg) }));
 
   // Smooth outlier weeks
   const smoothSeasons = [...seasonData];
@@ -349,7 +352,7 @@ const findPlantingWindowDirect = (targetDateStr, seasonData, transitions) => {
     }
     
     // FIX: Pass the data directly to processing
-    const { seasonData, transitions } = processWeatherData(currentWeatherData);
+    const { seasonData, transitions } = currentWeatherData?.processed || processWeatherData(currentWeatherData);
     const windowResult = findPlantingWindowDirect(targetDate, seasonData, transitions);
     const eligiblePlants = getEligiblePlants(windowResult.plantingWindow, seasonData);
     
