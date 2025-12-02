@@ -775,7 +775,7 @@ const generatePlantColors = (layoutItems) => {
     if (mediumVeggies.length > 0) {
       const mediumRadius = mediumVeggies[0].spacing * pixelsPerInch;
       const mediumSpacing = mediumVeggies[0].spacing * 2 * pixelsPerInch;
-      const maxOverlapSqInches = 9;
+      const maxOverlapSqInches = 4;
       const maxOverlapSqPx = maxOverlapSqInches * (pixelsPerInch * pixelsPerInch);
       
       // Helper: Calculate circle overlap area
