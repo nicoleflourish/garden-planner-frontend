@@ -816,7 +816,7 @@ const generatePlantColors = (layoutItems) => {
       
       // Generate candidate positions
       const candidates = [];
-      const gridSpacing = mediumSpacing * 0.5; // 18px for 4.5" plants
+      const gridSpacing = 6; // Fixed to 6px grid for fine position detection
       const margin = 40;
       
       // FIRST: Explicitly add the 4 ideal corner positions
